@@ -168,7 +168,24 @@ export const VARIANTS: Record<LandingVariant, VariantConfig> = {
 };
 
 export function getLandingVariant(hostname?: string): LandingVariant {
-  // Detección servidor-side o cliente-side
+  // 1. Verificar query param ?variant=bovine|porcine|general (para debug)
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const variantParam = urlParams.get('variant');
+    if (variantParam === 'bovine' || variantParam === 'porcine' || variantParam === 'general') {
+      // Guardar en localStorage para persistir
+      localStorage.setItem('debug_variant', variantParam);
+      return variantParam;
+    }
+    
+    // 2. Verificar localStorage (si se estableció antes)
+    const savedVariant = localStorage.getItem('debug_variant');
+    if (savedVariant === 'bovine' || savedVariant === 'porcine' || savedVariant === 'general') {
+      return savedVariant;
+    }
+  }
+
+  // 3. Detección servidor-side o cliente-side por dominio
   const host = hostname || (typeof window !== 'undefined' ? window.location.hostname : '');
 
   if (host.includes('vacasdata')) return 'bovine';
