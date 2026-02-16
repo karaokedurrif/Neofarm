@@ -63,15 +63,15 @@ export const VARIANTS: Record<LandingVariant, VariantConfig> = {
   },
   bovine: {
     logo: 'NeoFarm · Vacuno',
-    headline: 'Tu rebaño conectado en tiempo real',
+    headline: 'Tu rebaño conectado en la sierra',
     subheadline:
-      'Localiza tus vacas por GPS, gestiona genética EPDs, calcula créditos de carbono y lleva la trazabilidad oficial sin papeles.',
-    cta_primary: 'Ver demo vacuno',
+      'Collares GPS LoRa, genética EPDs, créditos de carbono verificables y trazabilidad REGA en una plataforma.',
+    cta_primary: 'Ver demo vacuno →',
     cta_secondary: 'Solicitar piloto',
-    hero_image: '/hero-bovine.webp',
-    badges: ['GPS LoRa en sierra', 'Genética EPDs', 'Carbono con satélite NDVI'],
-    theme: { primary: '#1B4332', accent: '#40C057' },
-    demo_url: 'https://app.neofarm.io/demo/bovine',
+    hero_image: '/hero-farm.jpg',
+    badges: ['850 ha monitorizadas', '156 animales geolocalizados', '-12.4 tCO₂/año'],
+    theme: { primary: '#1F6F5C', accent: '#2DBE9D' },
+    demo_url: 'https://app.neofarm.io/dashboard?tenant=demo-bovine',
     modules: [
       {
         icon: '📍',
@@ -115,13 +115,13 @@ export const VARIANTS: Record<LandingVariant, VariantConfig> = {
     logo: 'NeoFarm · Porcino',
     headline: 'Infraestructura inteligente para naves ganaderas',
     subheadline:
-      'Sensores ambientales, visión IA, trazabilidad ICA en 1 click, SIGE digital y gestión de purines. Todo integrado.',
-    cta_primary: 'Ver demo porcino',
+      'Sensores T°/NH₃/CO₂, visión IA, SIGE digital completo y SmartPurín en una plataforma conectada.',
+    cta_primary: 'Ver demo porcino →',
     cta_secondary: 'Solicitar piloto',
-    hero_image: '/hero-porcine.webp',
-    badges: ['Sensores T°/NH₃/CO₂', 'IA Vision', 'SmartPurín'],
+    hero_image: '/hero-barn.jpg',
+    badges: ['2,400 plazas de cebo', '24 sensores activos', 'IC medio 2.38'],
     theme: { primary: '#991B1B', accent: '#DC2626' },
-    demo_url: 'https://app.neofarm.io/demo/porcine',
+    demo_url: 'https://app.neofarm.io/dashboard?tenant=demo-porcine',
     modules: [
       {
         icon: '🌡️',
