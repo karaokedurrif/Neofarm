@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Instrument+Serif:ital@0;1&display=swap');
+
+@layer base {
+  body {
+    @apply bg-white text-gray-900 antialiased;
+  }
+
+  h1, h2, h3 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-neofarm-accent text-white rounded-full font-medium 
+           hover:bg-amber-600 transition-all duration-200 
+           shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 border-2 border-gray-800 text-gray-800 rounded-full font-medium
+           hover:bg-gray-800 hover:text-white transition-all duration-200;
+  }
+
+  .section-container {
+    @apply max-w-7xl mx-auto px-6 py-20;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
+           bg-white/80 backdrop-blur-sm shadow-sm border border-gray-200;
+  }
+}
