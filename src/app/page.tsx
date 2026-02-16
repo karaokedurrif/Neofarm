@@ -32,7 +32,7 @@ export default function LandingPage() {
       <Navbar />
 
       {/* Hero con HUD panels */}
-      <HeroRefined variant={config} />
+      <HeroRefined />
 
       {/* Trust bar */}
       <TrustBar />
