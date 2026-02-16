@@ -120,7 +120,7 @@ export const VARIANTS: Record<LandingVariant, VariantConfig> = {
     cta_secondary: 'Solicitar piloto',
     hero_image: '/hero-porcine.webp',
     badges: ['Sensores T°/NH₃/CO₂', 'IA Vision', 'SmartPurín'],
-    theme: { primary: '#7C2D12', accent: '#F59E0B' },
+    theme: { primary: '#991B1B', accent: '#DC2626' },
     demo_url: 'https://app.neofarm.io/demo/porcine',
     modules: [
       {

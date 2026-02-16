@@ -10,7 +10,7 @@ export default function DebugPage() {
   const variants = [
     { id: 'general', name: 'General (neofarm.io)', color: '#0F766E', url: '/?variant=general' },
     { id: 'bovine', name: 'Vacuno (vacasdata.com)', color: '#1B4332', url: '/?variant=bovine' },
-    { id: 'porcine', name: 'Porcino (porcdata.com)', color: '#7C2D12', url: '/?variant=porcine' },
+    { id: 'porcine', name: 'Porcino (porcdata.com)', color: '#991B1B', url: '/?variant=porcine' },
   ];
 
   const handleSetVariant = (variantId: string) => {
