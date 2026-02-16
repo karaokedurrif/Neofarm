@@ -2,36 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Instrument+Serif:ital@0;1&display=swap');
 
 @layer base {
+  :root {
+    --primary: #1F6F5C;
+    --primary-deep: #18573F;
+    --accent: #2DBE9D;
+    --dark: #1E2A2F;
+    --text: #1E2A2F;
+    --text-mid: #5A6B70;
+    --text-muted: #8A9BA0;
+    --bg: #F7F9F8;
+    --white: #FFFFFF;
+  }
+
   body {
-    @apply bg-white text-gray-900 antialiased;
+    @apply antialiased;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   h1, h2, h3 {
-    @apply font-serif;
+    font-family: 'Instrument Serif', serif;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-6 py-3 bg-neofarm-accent text-white rounded-full font-medium 
-           hover:bg-amber-600 transition-all duration-200 
+    @apply px-7 py-3.5 text-white rounded-xl font-semibold transition-all duration-200
            shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+    background: var(--primary);
+  }
+  
+  .btn-primary:hover {
+    background: var(--primary-deep);
   }
 
   .btn-secondary {
-    @apply px-6 py-3 border-2 border-gray-800 text-gray-800 rounded-full font-medium
-           hover:bg-gray-800 hover:text-white transition-all duration-200;
+    @apply px-7 py-3.5 border text-gray-700 rounded-xl font-medium
+           hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all duration-200;
+    border-color: rgba(0,0,0,0.1);
   }
 
   .section-container {
-    @apply max-w-7xl mx-auto px-6 py-20;
+    @apply max-w-7xl mx-auto px-12 py-24;
   }
 
   .badge {
     @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
-           bg-white/80 backdrop-blur-sm shadow-sm border border-gray-200;
+           shadow-sm border;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(28px);
+    border-color: rgba(0,0,0,0.04);
+  }
+
+  /* HUD panels */
+  .hud {
+    @apply absolute rounded-xl p-4 shadow-2xl border;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(20px);
+    border-color: rgba(255,255,255,0.7);
+  }
+
+  .hud::before {
+    content: '';
+    @apply absolute top-0 left-5 w-8 h-1 rounded-b;
+    background: var(--accent);
+  }
+
+  /* Animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  @keyframes ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .animate-float {
+    animation: float 5s ease-in-out infinite;
+  }
+
+  .animate-ring {
+    animation: ring 2s ease-out infinite;
+  }
+
+  .animate-blink {
+    animation: blink 2s ease-in-out infinite;
   }
 }

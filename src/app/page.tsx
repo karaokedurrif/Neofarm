@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { getLandingVariant, VARIANTS, LandingVariant } from '@/config/variants';
-import Hero from '@/components/Hero';
-import ModulesGrid from '@/components/ModulesGrid';
+import Navbar from '@/components/Navbar';
+import HeroRefined from '@/components/HeroRefined';
+import TrustBar from '@/components/TrustBar';
+import InfraSection from '@/components/InfraSection';
+import ModulesGridRefined from '@/components/ModulesGridRefined';
 import FarmMatchSection from '@/components/FarmMatchSection';
 import Pricing from '@/components/Pricing';
 import Footer from '@/components/Footer';
-import { BookOpen, Zap } from 'lucide-react';
 
 export default function LandingPage() {
   const [variant, setVariant] = useState<LandingVariant>('general');
@@ -26,13 +28,19 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen">
-      {/* Hero */}
-      <Hero variant={config} />
+      {/* Navbar */}
+      <Navbar />
+
+      {/* Hero con HUD panels */}
+      <HeroRefined variant={config} />
+
+      {/* Trust bar */}
+      <TrustBar />
 
       {/* Problema → Solución */}
-      <section className="section-container bg-gray-50">
+      <section className="py-25 px-12 bg-gray-50">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">
+          <h2 className="text-4xl font-bold mb-6" style={{ color: 'var(--dark)', letterSpacing: '-0.8px' }}>
             De 5 apps que no se hablan a una plataforma integrada
           </h2>
           <div className="grid md:grid-cols-2 gap-8 mt-12">
@@ -60,14 +68,17 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Infraestructura conectada */}
+      <InfraSection />
+
       {/* Módulos */}
-      <ModulesGrid modules={config.modules} themeColor={config.theme.primary} />
+      <ModulesGridRefined variant={config} />
 
       {/* FarmMatch™ */}
       <FarmMatchSection />
 
       {/* Demo embed */}
-      <section className="section-container" id="demo">
+      <section className="py-25 px-12" id="demo">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <span className="text-sm font-medium text-neofarm-primary uppercase tracking-wider">
@@ -132,8 +143,7 @@ export default function LandingPage() {
                     className="inline-flex items-center gap-2 px-8 py-4 bg-neofarm-accent text-white rounded-full 
                              font-medium text-lg hover:bg-amber-600 transition-all shadow-lg"
                   >
-                    <Zap className="w-5 h-5" />
-                    Acceder a la demo
+                    ⚡ Acceder a la demo
                   </a>
                 </div>
               )}
@@ -191,34 +201,36 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Final */}
-      <section className="section-container bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <h2 className="text-5xl font-bold">¿Listo para modernizar tu granja?</h2>
-          <p className="text-xl text-gray-300">
-            Únete a más de 500 ganaderos que ya gestionan sus explotaciones con NeoFarm
+      <section className="py-25 px-12 text-center"
+               style={{ background: 'linear-gradient(180deg, var(--bg), #E6EDEA)' }}>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-2 justify-center mb-3">
+            <div className="w-6 h-px" style={{ background: 'var(--accent)' }} />
+            <span className="text-[11px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: 'var(--accent)' }}>
+              Empieza ahora
+            </span>
+            <div className="w-6 h-px" style={{ background: 'var(--accent)' }} />
+          </div>
+          <h2 className="text-5xl font-bold mb-4" style={{ color: 'var(--dark)', letterSpacing: '-1px' }}>
+            Setup en 3 minutos. Sin tarjeta.
+          </h2>
+          <p className="text-base mb-8 max-w-md mx-auto" style={{ color: 'var(--text-mid)' }}>
+            Elige tu especie, activa los módulos que necesitas y empieza a operar con datos reales.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <a
-              href={config.demo_url || `${process.env.NEXT_PUBLIC_APP_URL}/register`}
-              className="btn-primary flex items-center gap-2 text-lg"
-            >
-              <Zap className="w-5 h-5" />
-              Empezar ahora gratis
-            </a>
-            <a
-              href="/docs"
-              className="px-8 py-4 border-2 border-white text-white rounded-full font-medium
-                       hover:bg-white hover:text-gray-900 transition-all flex items-center gap-2"
-            >
-              <BookOpen className="w-5 h-5" />
-              Ver documentación
-            </a>
+          <div className="flex gap-3 justify-center">
+            <button className="btn-primary">
+              Comenzar setup (3 min)
+            </button>
+            <button className="btn-secondary">
+              Ver demo en vivo
+            </button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <Footer variant={variant} />
+      <Footer />
     </main>
   );
 }
