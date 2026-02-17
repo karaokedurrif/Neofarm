@@ -3,7 +3,7 @@ import Image from 'next/image';
 import {
   MapPin, Thermometer, Dna, Leaf, Eye, FileCheck, ClipboardList, Receipt,
   Droplet, Radio, Droplets, BarChart3, Camera, Beef, PiggyBank, Warehouse,
-  XCircle, CheckCircle, ArrowRight
+  XCircle, CheckCircle, ArrowRight, Award
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -298,6 +298,7 @@ export default function LandingPage() {
               { icon: ClipboardList, title: 'SIGE Digital', desc: '11 planes del RD 306/2020 en un dashboard. Inspecciones con 1 click.', badge: 'INTENSIVO', badgeColor: 'orange' },
               { icon: Receipt, title: 'ERP Ganadero', desc: 'Ventas, compras, inventario, RRHH, Modelo 303. Contabilidad integrada.' },
               { icon: Droplet, title: 'SmartPurín', desc: 'Gestión de fosa + biogás + planes de abonado. Cumplimiento RD 1051.', badge: 'INTENSIVO', badgeColor: 'orange' },
+              { icon: Award, title: 'Subvenciones', desc: 'Calcula ayudas PAC, PERTE Agroalimentario y ayudas autonómicas. Genera solicitudes.' },
             ].map((module, idx) => (
               <div
                 key={idx}
