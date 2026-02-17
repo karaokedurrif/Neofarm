@@ -2,32 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @layer base {
   :root {
-    --primary: #1F6F5C;
-    --primary-deep: #18573F;
-    --accent: #2DBE9D;
-    --dark: #1E2A2F;
-    --text: #1E2A2F;
-    --text-mid: #5A6B70;
-    --text-muted: #8A9BA0;
-    --bg: #F7F9F8;
-    --white: #FFFFFF;
+    /* Sistema premium NeoFarm Landing */
+    --green-900: #1B4332;
+    --green-700: #2D6A4F;
+    --green-500: #52B788;
+    --green-100: #D8F3DC;
+    --green-50:  #F0FAF4;
+    
+    --warm-50:   #FEFCF9;
+    --warm-100:  #F5F1EC;
+    --warm-200:  #E8E2DA;
+    
+    --text-900:  #1A1A1A;
+    --text-600:  #555555;
+    --text-400:  #999999;
+    
+    --accent:    #E07A5F;
   }
 
   body {
     @apply antialiased;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--text);
-    background: var(--bg);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text-900);
+    background: var(--warm-50);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
 
   h1, h2, h3 {
-    font-family: 'Instrument Serif', serif;
+    font-family: 'Instrument Serif', Georgia, serif;
   }
 }
 
