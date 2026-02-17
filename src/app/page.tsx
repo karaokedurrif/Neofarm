@@ -404,7 +404,7 @@ export default function LandingPage() {
             Elige tu tipo de explotación y explora la demo interactiva.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <Link
               href="/demo?type=extensivo"
               className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-[var(--green-500)] hover:shadow-lg transition-all group"
@@ -426,6 +426,21 @@ export default function LandingPage() {
               <p className="text-[var(--text-400)] mb-6">Naves, sensores, IA, purines</p>
               <div className="flex items-center text-[var(--accent)] font-semibold group-hover:gap-3 transition-all">
                 Explorar <ArrowRight className="w-5 h-5 ml-2" />
+              </div>
+            </Link>
+            
+            <Link
+              href="https://hub.vacasdata.com/dafo"
+              className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-500 hover:shadow-lg transition-all group"
+            >
+              <BarChart3 className="w-12 h-12 text-purple-600 mb-6" />
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-2xl font-bold">DAFO Inteligente</h3>
+                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded uppercase">IA</span>
+              </div>
+              <p className="text-[var(--text-400)] mb-6">Diagnóstico completo con Claude IA</p>
+              <div className="flex items-center text-purple-600 font-semibold group-hover:gap-3 transition-all">
+                Analizar mi granja <ArrowRight className="w-5 h-5 ml-2" />
               </div>
             </Link>
           </div>
