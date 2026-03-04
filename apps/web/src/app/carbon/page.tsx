@@ -23,24 +23,12 @@ export default function CarbonPage() {
     if (!catRef || catRef.length < 14) { setCatError('Mínimo 14 caracteres'); return; }
     setCatLoading(true); setCatError('');
     try {
-      const url = `https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCoordenadas.asmx/Consulta_RCCOOR?RC=${encodeURIComponent(catRef)}&SRS=EPSG:4326`;
-      const res = await fetch(url);
-      const text = await res.text();
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(text, 'text/xml');
-      const xcen = xml.querySelector('xcen')?.textContent || '';
-      const ycen = xml.querySelector('ycen')?.textContent || '';
-      const ldt = xml.querySelector('ldt')?.textContent || '';
-      if (!xcen || !ycen) throw new Error('No se encontró la parcela');
-      const supMatch = ldt?.match(/(\d[\d.,]+)\s*(?:m2|ha|m²)/i);
-      const supM2 = supMatch ? parseFloat(supMatch[1].replace(',', '.')) : 5000;
-      const ha = supM2 / 10000;
+      const res = await fetch(`/api/catastro?rc=${encodeURIComponent(catRef)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al consultar catastro');
+      const ha = data.superficie_m2 / 10000;
       setHectareas(+ha.toFixed(2));
-      setCatData({
-        lat: parseFloat(ycen), lon: parseFloat(xcen),
-        descripcion: ldt, superficie_m2: supM2,
-        wms: `https://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=Catastro&SRS=EPSG:4326&BBOX=${parseFloat(xcen)-0.003},${parseFloat(ycen)-0.003},${parseFloat(xcen)+0.003},${parseFloat(ycen)+0.003}&WIDTH=500&HEIGHT=350&FORMAT=image/png`,
-      });
+      setCatData(data);
     } catch (e: any) {
       setCatError(e.message || 'Error al consultar catastro');
     }
