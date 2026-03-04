@@ -127,7 +127,7 @@ export default function GeneticsPage() {
           <Dna size={24} style={{ display: 'inline', marginRight: 8 }} />
           Plan Genético — Granja Los Capones
         </h1>
-        <p style={{ color: 'var(--neutral-400)', fontSize: 13, margin: 0 }}>
+        <p style={{ color: 'var(--neutral-500)', fontSize: 13, margin: 0 }}>
           Basado en tu plantel actual: {GALLOS.length} gallos + {GALLINAS.reduce((s, g) => s + parseInt(g.nombre), 0) || 18} gallinas
         </p>
       </div>
@@ -161,17 +161,17 @@ export default function GeneticsPage() {
             {/* Gallos */}
             {GALLOS.map(g => (
               <div key={g.id} style={{
-                background: 'var(--neutral-800)', borderRadius: 10, padding: 12,
+                background: 'var(--neutral-50)', borderRadius: 10, padding: 12,
                 borderLeft: '3px solid #3B82F6',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{ fontSize: 20 }}>🐓</span>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 13 }}>{g.nombre}</div>
-                    <div style={{ fontSize: 11, color: 'var(--neutral-400)', fontFamily: 'var(--font-mono)' }}>{g.id}</div>
+                    <div style={{ fontSize: 11, color: 'var(--neutral-500)', fontFamily: 'var(--font-mono)' }}>{g.id}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--neutral-300)' }}>
+                <div style={{ fontSize: 12, color: 'var(--neutral-600)' }}>
                   {g.raza} · {g.peso}kg · {g.edad}
                 </div>
               </div>
@@ -179,17 +179,17 @@ export default function GeneticsPage() {
             {/* Gallinas (grouped) */}
             {GALLINAS.map(g => (
               <div key={g.id} style={{
-                background: 'var(--neutral-800)', borderRadius: 10, padding: 12,
+                background: 'var(--neutral-50)', borderRadius: 10, padding: 12,
                 borderLeft: '3px solid #EC4899',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                   <span style={{ fontSize: 20 }}>🐔</span>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 13 }}>{g.nombre}</div>
-                    <div style={{ fontSize: 11, color: 'var(--neutral-400)' }}>{g.raza}</div>
+                    <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>{g.raza}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--neutral-300)' }}>
+                <div style={{ fontSize: 12, color: 'var(--neutral-600)' }}>
                   {g.peso}kg media · {g.edad}
                 </div>
               </div>
@@ -219,8 +219,9 @@ export default function GeneticsPage() {
             const expanded = expandedCruce === cruce.id;
             return (
               <div key={cruce.id} style={{
-                background: 'var(--neutral-800)', borderRadius: 12,
-                border: `1px solid ${expanded ? 'var(--primary-500)' : 'var(--neutral-700)'}`,
+                background: 'var(--neutral-50)', borderRadius: 12,
+                border: `1px solid ${expanded ? 'var(--primary-500)' : 'var(--neutral-200)'}`,
+                color: 'var(--neutral-800)',
                 overflow: 'hidden', transition: 'border-color .2s',
               }}>
                 {/* Cruce header */}
@@ -258,7 +259,7 @@ export default function GeneticsPage() {
 
                 {/* Expanded detail */}
                 {expanded && (
-                  <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--neutral-700)' }}>
+                  <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--neutral-200)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 14 }}>
                       {/* Production */}
                       <div>
@@ -376,10 +377,10 @@ export default function GeneticsPage() {
                 ].map(r => (
                   <div key={r.l}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                      <span style={{ color: 'var(--neutral-300)' }}>{r.l}</span>
+                      <span style={{ color: 'var(--neutral-600)' }}>{r.l}</span>
                       <span style={{ fontWeight: 700, color: r.c, fontFamily: 'var(--font-mono)' }}>{r.v}</span>
                     </div>
-                    <div style={{ height: 4, background: 'var(--neutral-700)', borderRadius: 2 }}>
+                    <div style={{ height: 4, background: 'var(--neutral-200)', borderRadius: 2 }}>
                       <div style={{ height: '100%', width: `${r.w}%`, background: r.c, borderRadius: 2 }} />
                     </div>
                   </div>
@@ -400,7 +401,7 @@ export default function GeneticsPage() {
                     background: c.tipo === 'include' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
                   }}>
                     <span>{c.icon}</span>
-                    <span style={{ color: c.tipo === 'include' ? 'var(--neutral-200)' : 'var(--alert)' }}>{c.text}</span>
+                    <span style={{ color: c.tipo === 'include' ? 'var(--neutral-700)' : 'var(--alert)' }}>{c.text}</span>
                   </div>
                 ))}
               </div>
@@ -438,14 +439,14 @@ export default function GeneticsPage() {
                   Retrocruce recomendado
                 </div>
                 <div style={{
-                  background: 'var(--neutral-800)', borderRadius: 10, padding: 14,
-                  border: '1px solid var(--neutral-700)',
+                  background: 'var(--neutral-50)', borderRadius: 10, padding: 14,
+                  border: '1px solid var(--neutral-200)',
                 }}>
                   <div style={{ fontSize: 13, lineHeight: 1.7 }}>
                     <div>♀ F1 (CN × PR) seleccionada</div>
                     <div style={{ fontSize: 18, textAlign: 'center', padding: '4px 0' }}>×</div>
                     <div>♂ Castellana Negra (CN-001 Carbón)</div>
-                    <div style={{ borderTop: '1px dashed var(--neutral-600)', margin: '10px 0', padding: '10px 0 0' }}>
+                    <div style={{ borderTop: '1px dashed var(--neutral-300)', margin: '10px 0', padding: '10px 0 0' }}>
                       <strong>= 75% CN + 25% PR</strong>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--neutral-400)', marginTop: 6 }}>
@@ -466,7 +467,7 @@ export default function GeneticsPage() {
                     <strong>Coeficiente F:</strong> Mantener &lt; 6%
                   </div>
                   <div>Renovar reproductores cada 3-4 generaciones. Incorporar sangre nueva de criadores externos (intercambio de gallos).</div>
-                  <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--neutral-800)', borderRadius: 8, fontSize: 12 }}>
+                  <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--neutral-50)', borderRadius: 8, fontSize: 12 }}>
                     <strong>Registro genealógico:</strong> Mantener en /aves con códigos de pasaporte para trazabilidad completa.
                   </div>
                 </div>
@@ -489,6 +490,7 @@ export default function GeneticsPage() {
               <Link href="/simulator" style={{ color: 'var(--primary-400)', marginLeft: 6 }}>
                 Ir al simulador visual →
               </Link>
+
             </div>
           </div>
         </div>

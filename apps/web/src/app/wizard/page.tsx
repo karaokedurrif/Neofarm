@@ -20,9 +20,9 @@ interface Respuesta {
 
 /* ── Demo partners ────────────────────────────────── */
 const SOCIOS = [
-  { id: 'david', nombre: 'David', email: 'david@ovosfera.com', avatar: '🏠' },
+  { id: 'david', nombre: 'David', email: 'david@ovosfera.com', avatar: '💻' },
   { id: 'jesus', nombre: 'Jesús', email: 'jesus@ovosfera.com', avatar: '🍳' },
-  { id: 'fran', nombre: 'Fran', email: 'fran@ovosfera.com', avatar: '💻' },
+  { id: 'fran', nombre: 'Fran', email: 'fran@ovosfera.com', avatar: '🏠' },
 ];
 
 const TIEMPOS = ['< 2 horas', '2-5 horas', '5-10 horas', '10-20 horas', 'Dedicación completa'];
@@ -33,6 +33,8 @@ const IDEAS = [
   'Conservación de razas autóctonas + genética (nicho, prestigio)',
   'Agroturismo: visitas a la granja + venta in situ',
   'Formación: cursos de avicultura extensiva',
+  'Como hobby o pasión personal (sin ánimo de lucro inmediato)',
+  'Buscando un proyecto sostenible y de impacto medioambiental',
   'Todo lo anterior (diversificación máxima)',
 ];
 const APORTACIONES = [
@@ -140,8 +142,9 @@ export default function WizardPage() {
 
   /* ── Styles ──────────────────────────────────────── */
   const cardStyle: React.CSSProperties = {
-    background: 'var(--neutral-800)', borderRadius: 16, padding: 24,
-    border: '1px solid var(--neutral-700)', maxWidth: 700, margin: '0 auto',
+    background: 'white', borderRadius: 16, padding: 24,
+    border: '1px solid var(--neutral-100)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    maxWidth: 700, margin: '0 auto',
   };
   const btnPrimary: React.CSSProperties = {
     background: 'var(--primary-500)', color: '#fff', border: 'none',
@@ -150,17 +153,17 @@ export default function WizardPage() {
   };
   const optionBtn = (selected: boolean): React.CSSProperties => ({
     padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left' as const,
-    background: selected ? 'var(--primary-500)18' : 'var(--neutral-900)',
-    border: `1px solid ${selected ? 'var(--primary-500)' : 'var(--neutral-600)'}`,
-    color: selected ? 'var(--primary-300)' : 'var(--neutral-200)',
+    background: selected ? 'var(--primary-500)12' : 'var(--neutral-50)',
+    border: `1px solid ${selected ? 'var(--primary-500)' : 'var(--neutral-200)'}`,
+    color: selected ? 'var(--primary-700)' : 'var(--neutral-700)',
     fontWeight: selected ? 600 : 400, fontSize: 13, width: '100%',
     transition: 'all .15s',
   });
 
   return (
     <div style={{
-      minHeight: '100vh', background: 'var(--neutral-950)',
-      padding: '40px 20px', color: 'var(--neutral-100)',
+      minHeight: '100vh', background: 'var(--neutral-25)',
+      padding: '40px 20px', color: 'var(--neutral-800)',
     }}>
       {/* Progress bar */}
       <div style={{ maxWidth: 700, margin: '0 auto 24px' }}>
@@ -168,7 +171,7 @@ export default function WizardPage() {
           <span>Wizard de Socios</span>
           <span>{['intro','r1q1','r1q2','r1q3','r1_results','r2q4','r2q5','r2q6','r2_results','final'].indexOf(step) + 1}/10</span>
         </div>
-        <div style={{ height: 4, background: 'var(--neutral-700)', borderRadius: 2 }}>
+        <div style={{ height: 4, background: 'var(--neutral-200)', borderRadius: 2 }}>
           <div style={{
             height: '100%', borderRadius: 2, background: 'var(--primary-500)',
             width: `${((['intro','r1q1','r1q2','r1q3','r1_results','r2q4','r2q5','r2q6','r2_results','final'].indexOf(step) + 1) / 10) * 100}%`,
@@ -188,7 +191,7 @@ export default function WizardPage() {
           <div style={{ fontSize: 13, color: 'var(--neutral-400)' }}>
             {otherSocios.map(s => s.avatar + ' ' + s.nombre).join(', ')} están respondiendo
           </div>
-          <div style={{ width: 100, height: 4, background: 'var(--neutral-700)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ width: 100, height: 4, background: 'var(--neutral-200)', borderRadius: 2, overflow: 'hidden' }}>
             <div style={{
               height: '100%', background: 'var(--primary-500)', borderRadius: 2, width: '60%',
               animation: 'progressSlide 1.5s ease-in-out infinite',
@@ -258,7 +261,7 @@ export default function WizardPage() {
               className="nf-input" style={{ width: '100%' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setStep('intro')} style={{ ...btnPrimary, background: 'var(--neutral-700)' }}>
+            <button onClick={() => setStep('intro')} style={{ ...btnPrimary, background: 'var(--neutral-200)' }}>
               <ChevronLeft size={16} /> Atrás
             </button>
             <button onClick={() => setStep('r1q2')} disabled={!tiempo} style={{ ...btnPrimary, opacity: tiempo ? 1 : 0.5 }}>
@@ -295,7 +298,7 @@ export default function WizardPage() {
               placeholder="Tu propuesta…" className="nf-input" style={{ width: '100%' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setStep('r1q1')} style={{ ...btnPrimary, background: 'var(--neutral-700)' }}>
+            <button onClick={() => setStep('r1q1')} style={{ ...btnPrimary, background: 'var(--neutral-200)' }}>
               <ChevronLeft size={16} /> Atrás
             </button>
             <button onClick={() => setStep('r1q3')} disabled={ideas.length === 0} style={{ ...btnPrimary, opacity: ideas.length > 0 ? 1 : 0.5 }}>
@@ -332,7 +335,7 @@ export default function WizardPage() {
               placeholder="…" className="nf-input" style={{ width: '100%' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setStep('r1q2')} style={{ ...btnPrimary, background: 'var(--neutral-700)' }}>
+            <button onClick={() => setStep('r1q2')} style={{ ...btnPrimary, background: 'var(--neutral-200)' }}>
               <ChevronLeft size={16} /> Atrás
             </button>
             <button
@@ -356,7 +359,7 @@ export default function WizardPage() {
           </div>
 
           {/* Time comparison */}
-          <div style={{ background: 'var(--neutral-900)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>⏰ Tiempo disponible</div>
             {getAllR1().map(r => (
               <div key={r.userId} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', fontSize: 13 }}>
@@ -368,7 +371,7 @@ export default function WizardPage() {
           </div>
 
           {/* Ideas consensus */}
-          <div style={{ background: 'var(--neutral-900)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>💡 Ideas de negocio (consenso)</div>
             {countIdeas().map(([idea, count]) => (
               <div key={idea} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', fontSize: 12 }}>
@@ -384,7 +387,7 @@ export default function WizardPage() {
           </div>
 
           {/* Contributions */}
-          <div style={{ background: 'var(--neutral-900)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>🤝 Aportaciones</div>
             {getAllR1().map(r => (
               <div key={r.userId} style={{ marginBottom: 10 }}>
@@ -425,7 +428,7 @@ export default function WizardPage() {
               ].map(r => (
                 <div key={r.nombre} style={{
                   display: 'flex', gap: 10, alignItems: 'center',
-                  padding: '10px 12px', background: 'var(--neutral-800)', borderRadius: 10,
+                  padding: '10px 12px', background: 'var(--neutral-50)', borderRadius: 10,
                 }}>
                   <span style={{ fontSize: 24 }}>{r.icon}</span>
                   <div>
@@ -461,7 +464,7 @@ export default function WizardPage() {
             ))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setStep('r1_results')} style={{ ...btnPrimary, background: 'var(--neutral-700)' }}>
+            <button onClick={() => setStep('r1_results')} style={{ ...btnPrimary, background: 'var(--neutral-200)' }}>
               <ChevronLeft size={16} /> Atrás
             </button>
             <button onClick={() => setStep('r2q5')} disabled={!inversion} style={{ ...btnPrimary, opacity: inversion ? 1 : 0.5 }}>
@@ -487,7 +490,7 @@ export default function WizardPage() {
             ))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setStep('r2q4')} style={{ ...btnPrimary, background: 'var(--neutral-700)' }}>
+            <button onClick={() => setStep('r2q4')} style={{ ...btnPrimary, background: 'var(--neutral-200)' }}>
               <ChevronLeft size={16} /> Atrás
             </button>
             <button onClick={() => setStep('r2q6')} disabled={!decision} style={{ ...btnPrimary, opacity: decision ? 1 : 0.5 }}>
@@ -513,7 +516,7 @@ export default function WizardPage() {
             ))}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={() => setStep('r2q5')} style={{ ...btnPrimary, background: 'var(--neutral-700)' }}>
+            <button onClick={() => setStep('r2q5')} style={{ ...btnPrimary, background: 'var(--neutral-200)' }}>
               <ChevronLeft size={16} /> Atrás
             </button>
             <button
@@ -538,8 +541,8 @@ export default function WizardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
             {getAllR2().map(r => (
               <div key={r.userId} style={{
-                background: 'var(--neutral-900)', borderRadius: 12, padding: 14,
-                border: '1px solid var(--neutral-700)',
+                background: 'var(--neutral-50)', borderRadius: 12, padding: 14,
+                border: '1px solid var(--neutral-200)',
               }}>
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, textAlign: 'center' }}>
                   {SOCIOS.find(s => s.id === r.userId)?.avatar} {r.nombre}
@@ -576,8 +579,8 @@ export default function WizardPage() {
           </div>
 
           <div style={{
-            background: 'var(--neutral-900)', borderRadius: 12, padding: 20, marginBottom: 20,
-            border: '1px solid var(--neutral-700)', fontSize: 13, lineHeight: 1.8,
+            background: 'var(--neutral-50)', borderRadius: 12, padding: 20, marginBottom: 20,
+            border: '1px solid var(--neutral-200)', fontSize: 13, lineHeight: 1.8,
           }}>
             <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>1. Socios y roles</h3>
             {[

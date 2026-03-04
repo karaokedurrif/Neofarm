@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 /* ── Types ─────────────────────────────────────────── */
-type Tab = 'formulador' | 'mercado' | 'pastos' | 'finition' | 'alternativas';
+type Tab = 'formulador' | 'mercado' | 'pastos' | 'finition' | 'alternativas' | 'parcela';
 
 interface Fase {
   nombre: string;
@@ -206,6 +206,10 @@ export default function NutritionPage() {
   const [capones, setCapones] = useState(12);
   const [diasFinition, setDiasFinition] = useState(21);
   const [recetaIdx, setRecetaIdx] = useState(0);
+  const [catRef, setCatRef] = useState('');
+  const [catData, setCatData] = useState<any>(null);
+  const [catLoading, setCatLoading] = useState(false);
+  const [catError, setCatError] = useState('');
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'formulador', label: 'Formulador', icon: '🧪' },
@@ -213,6 +217,7 @@ export default function NutritionPage() {
     { id: 'pastos', label: 'Pastos y bicheo', icon: '🌿' },
     { id: 'finition', label: 'Finition (épinette)', icon: '🍗' },
     { id: 'alternativas', label: 'Alternativas IA', icon: '🤖' },
+    { id: 'parcela', label: 'Mi Parcela', icon: '🗺️' },
   ];
 
   // Formulador calculations
@@ -237,14 +242,14 @@ export default function NutritionPage() {
         <FlaskConical size={24} style={{ display: 'inline', marginRight: 8 }} />
         Nutrición Inteligente
       </h1>
-      <p style={{ color: 'var(--neutral-400)', fontSize: 13, marginBottom: 20 }}>
+      <p style={{ color: 'var(--neutral-500)', fontSize: 13, marginBottom: 20 }}>
         Formulación de pienso, mercado de cereales, gestión de pastos y acabado de capones.
       </p>
 
       {/* ── Tabs ──────────────────────────────────── */}
       <div style={{
         display: 'flex', gap: 4, marginBottom: 20, overflowX: 'auto',
-        borderBottom: '1px solid var(--neutral-700)', paddingBottom: 0,
+        borderBottom: '1px solid var(--neutral-200)', paddingBottom: 0,
       }}>
         {tabs.map(t => (
           <button
@@ -253,7 +258,7 @@ export default function NutritionPage() {
             style={{
               padding: '10px 16px', border: 'none', cursor: 'pointer',
               background: activeTab === t.id ? 'var(--primary-500)22' : 'transparent',
-              color: activeTab === t.id ? 'var(--primary-400)' : 'var(--neutral-400)',
+              color: activeTab === t.id ? 'var(--primary-600)' : 'var(--neutral-500)',
               borderBottom: activeTab === t.id ? '2px solid var(--primary-500)' : '2px solid transparent',
               fontWeight: activeTab === t.id ? 700 : 500, fontSize: 13,
               whiteSpace: 'nowrap', borderRadius: '8px 8px 0 0',
@@ -596,7 +601,7 @@ export default function NutritionPage() {
                 <div className="nf-card-meta">Acabado tradicional francés</div>
               </div>
               <div className="nf-card-pad">
-                <p style={{ fontSize: 13, color: 'var(--neutral-300)', lineHeight: 1.6, marginBottom: 12 }}>
+                <p style={{ fontSize: 13, color: 'var(--neutral-600)', lineHeight: 1.6, marginBottom: 12 }}>
                   La <strong>épinette</strong> es la técnica francesa de acabado de capones en jaula con penumbra
                   y alimentación rica durante los últimos 15-30 días antes del sacrificio.
                   Produce carne con grasa intramuscular infiltrada, más tierna y jugosa.
@@ -605,7 +610,7 @@ export default function NutritionPage() {
                   {FINITION_DATA.condiciones.map(c => (
                     <div key={c.param} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '8px 10px', background: 'var(--neutral-800)', borderRadius: 8, fontSize: 12,
+                      padding: '8px 10px', background: 'var(--neutral-50)', borderRadius: 8, fontSize: 12,
                     }}>
                       <div>
                         <span style={{ fontWeight: 700 }}>{c.param}:</span>{' '}
@@ -631,7 +636,7 @@ export default function NutritionPage() {
                     { l: 'Sin acabado', v: FINITION_DATA.resultado.valorSin, c: 'var(--neutral-400)' },
                     { l: 'Con épinette', v: FINITION_DATA.resultado.valorCon, c: '#F59E0B' },
                   ].map(r => (
-                    <div key={r.l} style={{ background: 'var(--neutral-800)', borderRadius: 8, padding: 10 }}>
+                    <div key={r.l} style={{ background: 'var(--neutral-50)', borderRadius: 8, padding: 10 }}>
                       <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>{r.l}</div>
                       <div style={{ fontWeight: 700, fontSize: 14, color: r.c }}>{r.v}</div>
                     </div>
@@ -682,19 +687,19 @@ export default function NutritionPage() {
                     className="nf-input" style={{ width: '100%', marginTop: 4 }} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                  <div style={{ background: 'var(--neutral-800)', borderRadius: 10, padding: 10, textAlign: 'center' }}>
+                  <div style={{ background: 'var(--neutral-50)', borderRadius: 10, padding: 10, textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>Coste total</div>
                     <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--alert)', fontFamily: 'var(--font-mono)' }}>
                       {costeTotal.toFixed(0)}€
                     </div>
                   </div>
-                  <div style={{ background: 'var(--neutral-800)', borderRadius: 10, padding: 10, textAlign: 'center' }}>
+                  <div style={{ background: 'var(--neutral-50)', borderRadius: 10, padding: 10, textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>Valor sin</div>
                     <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--neutral-400)', fontFamily: 'var(--font-mono)' }}>
                       {valorSinFinition.toFixed(0)}€
                     </div>
                   </div>
-                  <div style={{ background: 'var(--neutral-800)', borderRadius: 10, padding: 10, textAlign: 'center' }}>
+                  <div style={{ background: 'var(--neutral-50)', borderRadius: 10, padding: 10, textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>Valor con</div>
                     <div style={{ fontWeight: 800, fontSize: 18, color: '#F59E0B', fontFamily: 'var(--font-mono)' }}>
                       {valorConFinition.toFixed(0)}€
@@ -756,12 +761,152 @@ export default function NutritionPage() {
                       </div>
                     ))}
                   </div>
-                  <p style={{ fontSize: 12, color: 'var(--neutral-300)', lineHeight: 1.5, margin: 0, padding: '8px 0 0', borderTop: '1px solid var(--neutral-800)' }}>
+                  <p style={{ fontSize: 12, color: 'var(--neutral-600)', lineHeight: 1.5, margin: 0, padding: '8px 0 0', borderTop: '1px solid var(--neutral-200)' }}>
                     {alt.ventajas}
                   </p>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════
+         TAB: MI PARCELA (CATASTRO)
+         ══════════════════════════════════════════════ */}
+      {activeTab === 'parcela' && (
+        <div>
+          <div className="nf-card">
+            <div className="nf-card-hd">
+              <div className="nf-card-title">🗺️ Mi Parcela — Catastro</div>
+              <div className="nf-card-meta">Introduce tu referencia catastral para estimar disponibilidad de pasto</div>
+            </div>
+            <div className="nf-card-pad">
+              <div style={{ display: 'flex', gap: 10, alignItems: 'end', marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-600)', display: 'block', marginBottom: 4 }}>
+                    Referencia Catastral
+                  </label>
+                  <input
+                    className="nf-input"
+                    value={catRef}
+                    onChange={e => setCatRef(e.target.value)}
+                    placeholder="Ej: 29900A01200039"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!catRef || catRef.length < 14) { setCatError('Mínimo 14 caracteres'); return; }
+                    setCatLoading(true); setCatError('');
+                    try {
+                      const url = `https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCoordenadas.asmx/Consulta_RCCOOR?RC=${encodeURIComponent(catRef)}&SRS=EPSG:4326`;
+                      const res = await fetch(url);
+                      const text = await res.text();
+                      const parser = new DOMParser();
+                      const xml = parser.parseFromString(text, 'text/xml');
+                      const xcen = xml.querySelector('xcen')?.textContent || '';
+                      const ycen = xml.querySelector('ycen')?.textContent || '';
+                      const prov = xml.querySelector('cp')?.textContent || '';
+                      const mun = xml.querySelector('cm')?.textContent || '';
+                      const ldt = xml.querySelector('ldt')?.textContent || '';
+                      if (!xcen || !ycen) throw new Error('No se encontró la parcela');
+                      const supMatch = ldt?.match(/(\d[\d.,]+)\s*(?:m2|ha|m²)/i);
+                      const supM2 = supMatch ? parseFloat(supMatch[1].replace(',', '.')) : 5000;
+                      setCatData({
+                        lat: parseFloat(ycen), lon: parseFloat(xcen),
+                        provincia: prov, municipio: mun, descripcion: ldt,
+                        superficie_m2: supM2,
+                        wms: `https://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=Catastro&SRS=EPSG:4326&BBOX=${parseFloat(xcen)-0.002},${parseFloat(ycen)-0.002},${parseFloat(xcen)+0.002},${parseFloat(ycen)+0.002}&WIDTH=400&HEIGHT=300&FORMAT=image/png`,
+                      });
+                    } catch (e: any) {
+                      setCatError(e.message || 'Error al consultar catastro');
+                    }
+                    setCatLoading(false);
+                  }}
+                  className="nf-btn primary"
+                  disabled={catLoading}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {catLoading ? '⏳ Consultando...' : '🔍 Consultar'}
+                </button>
+              </div>
+
+              {catError && (
+                <div style={{ padding: '8px 12px', borderRadius: 8, background: '#FEE2E2', color: '#DC2626', fontSize: 12, marginBottom: 16 }}>
+                  {catError}
+                </div>
+              )}
+
+              {catData && (
+                <div>
+                  {/* Map */}
+                  <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 16, border: '1px solid var(--neutral-200)' }}>
+                    <img
+                      src={catData.wms}
+                      alt="Catastro WMS"
+                      style={{ width: '100%', height: 250, objectFit: 'cover' }}
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+
+                  {/* Data grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 16 }}>
+                    {[
+                      { l: 'Coordenadas', v: `${catData.lat.toFixed(5)}, ${catData.lon.toFixed(5)}` },
+                      { l: 'Superficie', v: catData.superficie_m2 > 10000 ? `${(catData.superficie_m2/10000).toFixed(2)} ha` : `${catData.superficie_m2.toLocaleString()} m²` },
+                      { l: 'Provincia', v: catData.provincia },
+                      { l: 'Municipio', v: catData.municipio },
+                    ].map(r => (
+                      <div key={r.l} style={{ background: 'var(--neutral-50)', borderRadius: 8, padding: '8px 10px' }}>
+                        <div style={{ fontSize: 10, color: 'var(--neutral-400)' }}>{r.l}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>{r.v}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {catData.descripcion && (
+                    <div style={{ fontSize: 12, color: 'var(--neutral-600)', marginBottom: 16 }}>
+                      <strong>Descripción:</strong> {catData.descripcion}
+                    </div>
+                  )}
+
+                  {/* Pasture estimation */}
+                  <div style={{
+                    background: '#ECFDF5', borderRadius: 10, padding: 16,
+                    border: '1px solid #10B98133',
+                  }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#10B981', marginBottom: 10 }}>
+                      🌿 Estimación de pasto disponible
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      {(() => {
+                        const ha = catData.superficie_m2 / 10000;
+                        const pastoKgHaSeason = { primavera: 2500, verano: 800, otoño: 1500, invierno: 500 };
+                        const season = new Date().getMonth() < 3 || new Date().getMonth() > 10 ? 'invierno' : new Date().getMonth() < 6 ? 'primavera' : new Date().getMonth() < 9 ? 'verano' : 'otoño';
+                        const pastoKg = ha * pastoKgHaSeason[season];
+                        const avesCapacidad = Math.floor(ha * 1000); // ~1000 aves/ha camperas
+                        return [
+                          { l: 'Hectáreas', v: ha.toFixed(2) },
+                          { l: 'Estación actual', v: season.charAt(0).toUpperCase() + season.slice(1) },
+                          { l: 'Pasto estimado', v: `${pastoKg.toFixed(0)} kg MS` },
+                          { l: 'Capacidad', v: `~${avesCapacidad} aves camperas` },
+                        ].map(r => (
+                          <div key={r.l}>
+                            <div style={{ fontSize: 10, color: '#16A34A' }}>{r.l}</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#15803D', fontFamily: 'var(--font-mono)' }}>{r.v}</div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#16A34A', marginTop: 10, lineHeight: 1.5 }}>
+                      ℹ️ Estimaciones basadas en producción media de materia seca por estación en clima mediterráneo.
+                      La capacidad ganadera depende del sistema de rotación de parcelas.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
