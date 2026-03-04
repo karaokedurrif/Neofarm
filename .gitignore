@@ -1,0 +1,30 @@
+
+# Build outputs
+# Dependencies
+# Docker volumes
+# Environment variables
+# IDE
+# Logs
+# OS
+*.log
+*.pyc
+*.swo
+*.swp
+.DS_Store
+.env*.local
+.env.local
+.idea/
+.next/
+.vscode/
+Thumbs.db
+__pycache__/
+build/
+dist/
+node_modules/
+npm-debug.log*
+ovosfera-db-data/
+ovosfera-mqtt-data/
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
+pnpm-lock.yaml

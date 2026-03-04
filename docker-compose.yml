@@ -1,0 +1,85 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: ovosfera-db
+    environment:
+      POSTGRES_DB: ovosfera
+      POSTGRES_USER: ovosfera_user
+      POSTGRES_PASSWORD: ovosfera_pass
+    volumes:
+      - ovosfera-db-data:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
+    networks:
+      - ovosfera-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ovosfera_user -d ovosfera"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: ovosfera-api
+    environment:
+      - DATABASE_URL=postgresql://ovosfera_user:ovosfera_pass@db:5432/ovosfera
+      - SECRET_KEY=ovosfera-secret-change-me
+      - PYTHONUNBUFFERED=1
+      - CORS_ORIGINS=https://hub.ovosfera.com,https://api.ovosfera.com
+    volumes:
+      - ./apps/api:/app
+    ports:
+      - "8004:8000"
+    depends_on:
+      - db
+    networks:
+      - ovosfera-network
+      - proxy
+    restart: unless-stopped
+
+  web:
+    image: node:20-alpine
+    container_name: ovosfera-web
+    working_dir: /workspace
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.ovosfera.com
+      - NEXT_PUBLIC_APP_NAME=OvoSfera Hub
+    env_file:
+      - .env.local
+    volumes:
+      - .:/workspace
+    ports:
+      - "3003:3000"
+    command: sh /workspace/start-web.sh
+    networks:
+      - ovosfera-network
+      - proxy
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: ovosfera-mqtt
+    ports:
+      - "1885:1883"
+      - "9003:9001"
+    volumes:
+      - ./mqtt/config:/mosquitto/config
+      - ovosfera-mqtt-data:/mosquitto/data
+    networks:
+      - ovosfera-network
+    restart: unless-stopped
+
+volumes:
+  ovosfera-db-data:
+  ovosfera-mqtt-data:
+
+networks:
+  ovosfera-network:
+    driver: bridge
+  proxy:
+    external: true
