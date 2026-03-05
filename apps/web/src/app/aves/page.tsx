@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Package, Plus, Search, Filter, X, Camera, Edit2, Trash2, ChevronDown, Eye } from 'lucide-react';
 
 /* ── Types ─────────────────────────────────────────── */
@@ -22,6 +22,9 @@ interface Ave {
   fechaAlta: string;
   madre?: string;
   padre?: string;
+  color?: string;
+  fenotipo?: string;
+  genotipo?: string;
 }
 
 /* ── Config ─────────────────────────────────────────── */
@@ -43,6 +46,29 @@ const RAZAS_CATALOGO = [
 const GALLINEROS_LIST = ['G1 — Principal', 'G2 — Capones', 'G3 — Cría', 'G4 — Parque exterior'];
 const ESTADOS: EstadoAve[] = ['Ponedora activa', 'Reproductor', 'Engorde', 'Cría', 'Reposo', 'Baja'];
 const TIPOS: TipoAve[] = ['Gallina', 'Gallo', 'Capón', 'Pollito', 'Pularda'];
+
+/* ── Auto-sex from tipo ────────────────────────────── */
+function sexFromTipo(tipo: TipoAve): 'M' | 'H' | null {
+  if (tipo === 'Gallo' || tipo === 'Capón') return 'M';
+  if (tipo === 'Gallina' || tipo === 'Pularda') return 'H';
+  return null; // Pollito → no determinado hasta sexaje
+}
+
+/* ── Fenotipo por raza (auto-fill) ─────────────────── */
+const FENOTIPO_POR_RAZA: Record<string, { color: string; fenotipo: string; genotipo: string }> = {
+  'Castellana Negra': { color: 'Negro', fenotipo: 'Plumaje negro iridiscente, cresta simple, orejillas blancas', genotipo: 'E/E (extensión negro), Ml+/Ml+' },
+  'Prat Leonada': { color: 'Leonado', fenotipo: 'Plumaje leonado dorado, tarsos rosados, piel blanca', genotipo: 'e+/e+ (tipo salvaje), Co/Co (colombino)' },
+  'Plymouth Rock': { color: 'Barrado', fenotipo: 'Plumaje barrado blanco/negro, cresta simple, tarsos amarillos', genotipo: 'B/B (barring), E/E' },
+  'Sussex': { color: 'Blanco armiñado', fenotipo: 'Plumaje blanco con collar negro, cresta simple', genotipo: 'Co/Co (colombino), e+/e+' },
+  'Mos (Galicia)': { color: 'Trigueño', fenotipo: 'Plumaje trigueño variado, cresta en guisante, tarsos verdes', genotipo: 'P/P (guisante), e+/e+ (salvaje)' },
+  'Empordanesa': { color: 'Rojo/Negro', fenotipo: 'Plumaje pardo-rojizo, cresta clavel, orejas rojas', genotipo: 'RN/RN (rojo negro), eWh/eWh' },
+  'Rhode Island Red': { color: 'Caoba', fenotipo: 'Plumaje rojo caoba brillante, cresta simple', genotipo: 'Mh/Mh (caoba), e+/e+' },
+  'Wyandotte': { color: 'Variado', fenotipo: 'Plumaje ribeteado, cresta en rosa, cuerpo redondeado', genotipo: 'R/R (rosa), Pg/Pg (ribeteado)' },
+  'Brahma': { color: 'Armiñado', fenotipo: 'Plumaje denso, patas emplumadas, gran tamaño', genotipo: 'Co/Co (colombino), Pti-1/Pti-1 (plumas tarsos)' },
+  'Marans': { color: 'Negro cobrizo', fenotipo: 'Plumaje cobrizo oscuro, huevos chocolate oscuro', genotipo: 'Mh/Mh, O (huevo marrón oscuro)' },
+  'Leghorn Blanca': { color: 'Blanco', fenotipo: 'Plumaje blanco puro, cresta grande, producción alta', genotipo: 'I/I (blanco dominante), c/c (recesivo)' },
+  'Orpington': { color: 'Leonado/Negro', fenotipo: 'Plumaje denso bufado, gran tamaño, temperamento dócil', genotipo: 'bf/bf (buff), e+/e+' },
+};
 
 /* ── Demo data ─────────────────────────────────────── */
 const nextId = () => Math.floor(Math.random() * 9000) + 1000;
@@ -117,16 +143,27 @@ function estadoColor(e: EstadoAve): string {
 }
 
 /* ── Empty form ────────────────────────────────────── */
-const emptyAve = (): Omit<Ave, 'id' | 'anilla' | 'fechaAlta'> => ({
-  tipo: 'Gallina',
-  raza: RAZAS_CATALOGO[0],
-  sexo: 'H',
-  fechaNac: new Date().toISOString().split('T')[0],
-  peso: 2.0,
-  estado: 'Ponedora activa',
-  gallinero: GALLINEROS_LIST[0],
-  notas: '',
-});
+const emptyAve = (): Omit<Ave, 'id' | 'anilla' | 'fechaAlta'> => {
+  const tipo: TipoAve = 'Gallina';
+  const raza = RAZAS_CATALOGO[0];
+  const fen = FENOTIPO_POR_RAZA[raza];
+  return {
+    tipo,
+    raza,
+    sexo: sexFromTipo(tipo) || 'H',
+    fechaNac: new Date().toISOString().split('T')[0],
+    peso: 2.0,
+    estado: 'Ponedora activa',
+    gallinero: GALLINEROS_LIST[0],
+    notas: '',
+    color: fen?.color || '',
+    fenotipo: fen?.fenotipo || '',
+    genotipo: fen?.genotipo || '',
+  };
+};
+
+/* ── localStorage key for cross-page sharing ──────── */
+const LS_KEY = 'ovosfera_aves';
 
 /* ── Component ─────────────────────────────────────── */
 export default function AvesPage() {
@@ -182,8 +219,34 @@ export default function AvesPage() {
       estado: a.estado,
       gallinero: a.gallinero,
       notas: a.notas || '',
+      color: a.color || '',
+      fenotipo: a.fenotipo || '',
+      genotipo: a.genotipo || '',
     });
     setShowModal(true);
+  };
+
+  /* ── Persist to localStorage for /genetics ── */
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(aves)); } catch {}
+  }, [aves]);
+
+  /* ── Auto-fill fenotipo when raza changes ── */
+  const handleRazaChange = (raza: string) => {
+    const fen = FENOTIPO_POR_RAZA[raza];
+    setForm(f => ({
+      ...f,
+      raza,
+      color: fen?.color || f.color || '',
+      fenotipo: fen?.fenotipo || f.fenotipo || '',
+      genotipo: fen?.genotipo || f.genotipo || '',
+    }));
+  };
+
+  /* ── Auto-sex when tipo changes ── */
+  const handleTipoChange = (tipo: TipoAve) => {
+    const autoSex = sexFromTipo(tipo);
+    setForm(f => ({ ...f, tipo, ...(autoSex ? { sexo: autoSex } : {}) }));
   };
 
   const handleSave = () => {
@@ -353,25 +416,28 @@ export default function AvesPage() {
               </button>
             </div>
             <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Tipo → auto-sex */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label className="nf-label">Tipo</label>
-                  <select className="nf-input" value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoAve }))}>
+                  <select className="nf-input" value={form.tipo} onChange={e => handleTipoChange(e.target.value as TipoAve)}>
                     {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="nf-label">Sexo</label>
-                  <select className="nf-input" value={form.sexo} onChange={e => setForm(f => ({ ...f, sexo: e.target.value as 'M' | 'H' }))}>
+                  <label className="nf-label">Sexo {sexFromTipo(form.tipo) ? '(auto)' : ''}</label>
+                  <select className="nf-input" value={form.sexo} onChange={e => setForm(f => ({ ...f, sexo: e.target.value as 'M' | 'H' }))}
+                    disabled={!!sexFromTipo(form.tipo)}>
                     <option value="H">♀ Hembra</option>
                     <option value="M">♂ Macho</option>
                   </select>
                 </div>
               </div>
 
+              {/* Raza → auto-fill fenotipo */}
               <div>
                 <label className="nf-label">Raza</label>
-                <select className="nf-input" value={form.raza} onChange={e => setForm(f => ({ ...f, raza: e.target.value }))}>
+                <select className="nf-input" value={form.raza} onChange={e => handleRazaChange(e.target.value)}>
                   {RAZAS_CATALOGO.map(r => <option key={r} value={r}>{r}</option>)}
                   <option value="_custom">Otra (cruce)...</option>
                 </select>
@@ -400,6 +466,25 @@ export default function AvesPage() {
                   <select className="nf-input" value={form.gallinero} onChange={e => setForm(f => ({ ...f, gallinero: e.target.value }))}>
                     {GALLINEROS_LIST.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
+                </div>
+              </div>
+
+              {/* ── Genética ── */}
+              <div style={{ marginTop: 4, padding: '12px 14px', background: 'rgba(176,125,43,0.06)', borderRadius: 10, border: '1px solid rgba(176,125,43,0.15)' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#B07D2B', marginBottom: 10 }}>🧬 Genética / Fenotipo</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <label className="nf-label">Color plumaje</label>
+                    <input className="nf-input" value={form.color || ''} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} placeholder="Ej: Negro, Leonado..." />
+                  </div>
+                  <div>
+                    <label className="nf-label">Genotipo</label>
+                    <input className="nf-input" value={form.genotipo || ''} onChange={e => setForm(f => ({ ...f, genotipo: e.target.value }))} placeholder="Ej: E/E, Ml+/Ml+" style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }} />
+                  </div>
+                </div>
+                <div>
+                  <label className="nf-label">Fenotipo</label>
+                  <textarea className="nf-input" rows={2} value={form.fenotipo || ''} onChange={e => setForm(f => ({ ...f, fenotipo: e.target.value }))} placeholder="Descripción fenotípica..." style={{ fontSize: 12 }} />
                 </div>
               </div>
 
@@ -466,6 +551,18 @@ export default function AvesPage() {
                 {detailAve.padre && <div><span style={{ color: 'var(--neutral-500)', fontSize: 11 }}>Padre</span><div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)', fontSize: 11 }}>{detailAve.padre}</div></div>}
                 {detailAve.madre && <div><span style={{ color: 'var(--neutral-500)', fontSize: 11 }}>Madre</span><div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)', fontSize: 11 }}>{detailAve.madre}</div></div>}
               </div>
+
+              {/* Genética detail */}
+              {(detailAve.color || detailAve.fenotipo || detailAve.genotipo) && (
+                <div style={{ marginTop: 16, padding: 12, background: 'rgba(176,125,43,0.06)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(176,125,43,0.15)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#B07D2B', marginBottom: 6 }}>🧬 Genética</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+                    {detailAve.color && <div><span style={{ color: 'var(--neutral-500)' }}>Color:</span> <strong>{detailAve.color}</strong></div>}
+                    {detailAve.genotipo && <div><span style={{ color: 'var(--neutral-500)' }}>Genotipo:</span> <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{detailAve.genotipo}</strong></div>}
+                  </div>
+                  {detailAve.fenotipo && <div style={{ marginTop: 6, fontSize: 12, color: 'var(--neutral-600)' }}>{detailAve.fenotipo}</div>}
+                </div>
+              )}
 
               {detailAve.notas && (
                 <div style={{ marginTop: 16, padding: 12, background: 'var(--neutral-50)', borderRadius: 'var(--radius-md)', fontSize: 13 }}>

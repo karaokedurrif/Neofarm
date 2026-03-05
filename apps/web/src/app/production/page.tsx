@@ -1,20 +1,21 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   DndContext, DragOverlay, closestCorners, useSensor, useSensors,
   PointerSensor, KeyboardSensor, DragStartEvent, DragEndEvent, DragOverEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Egg, Plus, ArrowRight, X, Package, Bird, Drumstick,
-  Crown, ShoppingCart, CheckCircle2, MoreVertical, Baby,
-  Scissors, AlertTriangle, GripVertical
+  Crown, ShoppingCart, CheckCircle2, MoreVertical,
+  Scissors, AlertTriangle, ExternalLink
 } from 'lucide-react';
 
 /* ── Types ─────────────────────────────────────────── */
-type Fase = 'Incubación' | 'Cría' | 'Juvenil' | 'Engorde' | 'Reproductores' | 'Venta' | 'Finalizado';
+type Fase = 'Incubación' | 'Juvenil' | 'Engorde' | 'Reproductores' | 'Venta' | 'Finalizado';
 
 interface Lote {
   id: string;
@@ -34,7 +35,6 @@ interface Lote {
 /* ── Kanban column config (high contrast per spec) ── */
 const KANBAN_COLS: { fase: Fase; bg: string; border: string; emoji: string; icon: any }[] = [
   { fase: 'Incubación',    bg: '#FFF8E1', border: '#F9A825', emoji: '🥚', icon: Egg },
-  { fase: 'Cría',          bg: '#E8F5E9', border: '#43A047', emoji: '🐣', icon: Baby },
   { fase: 'Juvenil',       bg: '#E3F2FD', border: '#1E88E5', emoji: '🐥', icon: Bird },
   { fase: 'Engorde',       bg: '#FFF3E0', border: '#EF6C00', emoji: '🐔', icon: Drumstick },
   { fase: 'Reproductores', bg: '#F3E5F5', border: '#8E24AA', emoji: '🐓', icon: Crown },
@@ -47,11 +47,11 @@ const INITIAL_LOTES: Lote[] = [
   { id: 'LOT-2025-001', nombre: 'Lote Navidad 2025', fase: 'Engorde', animales: 12, desglose: { machos: 12, hembras: 0, sinSexar: 0 }, razaCruce: 'CN × Plymouth Rock', fechaInicio: '2025-02-15', fechaEstimadaSiguienteFase: '2025-11-15', gallinero: 'Zona Capones', pesoMedio: 2.8, mortalidad: 1, notas: 'Capones para Navidad — engorde lento' },
   { id: 'LOT-2025-002', nombre: 'Lote Reproductores', fase: 'Reproductores', animales: 20, desglose: { machos: 2, hembras: 18, sinSexar: 0 }, razaCruce: 'Castellana Negra', fechaInicio: '2024-03-10', fechaEstimadaSiguienteFase: '—', gallinero: 'Gallinero Principal', pesoMedio: 2.1, mortalidad: 0 },
   { id: 'LOT-2025-003', nombre: 'Incubación Primavera', fase: 'Incubación', animales: 24, razaCruce: 'CN × PL + PR', fechaInicio: '2025-06-28', fechaEstimadaSiguienteFase: '2025-07-19', gallinero: 'Incubadora', mortalidad: 0 },
-  { id: 'LOT-2025-004', nombre: 'Pollitos Mayo', fase: 'Cría', animales: 18, desglose: { machos: 0, hembras: 0, sinSexar: 18 }, razaCruce: 'Plymouth Rock', fechaInicio: '2025-05-20', fechaEstimadaSiguienteFase: '2025-07-01', gallinero: 'Zona Cría', pesoMedio: 0.6, mortalidad: 2 },
+  { id: 'LOT-2025-004', nombre: 'Pollitos Mayo', fase: 'Juvenil', animales: 18, desglose: { machos: 0, hembras: 0, sinSexar: 18 }, razaCruce: 'Plymouth Rock', fechaInicio: '2025-05-20', fechaEstimadaSiguienteFase: '2025-07-01', gallinero: 'Parque 1', pesoMedio: 0.6, mortalidad: 2 },
   { id: 'LOT-2025-005', nombre: 'Juveniles Abril', fase: 'Juvenil', animales: 15, desglose: { machos: 7, hembras: 8, sinSexar: 0 }, razaCruce: 'CN × PR', fechaInicio: '2025-04-01', fechaEstimadaSiguienteFase: '2025-08-15', gallinero: 'Parque 2', pesoMedio: 1.4, mortalidad: 1 },
   { id: 'LOT-2025-006', nombre: 'Lote Pascua', fase: 'Venta', animales: 8, razaCruce: 'Mos × CN', fechaInicio: '2024-09-15', fechaEstimadaSiguienteFase: '—', pesoMedio: 4.1, mortalidad: 0, notas: 'Listos para venta a restaurantes' },
   { id: 'LOT-2025-007', nombre: 'Engorde Otoño', fase: 'Engorde', animales: 10, desglose: { machos: 10, hembras: 0, sinSexar: 0 }, razaCruce: 'CN × Sulmtaler', fechaInicio: '2025-03-10', fechaEstimadaSiguienteFase: '2025-12-20', gallinero: 'Zona Capones', pesoMedio: 2.2, mortalidad: 0 },
-  { id: 'LOT-2025-008', nombre: 'Cría Verano', fase: 'Cría', animales: 22, desglose: { machos: 0, hembras: 0, sinSexar: 22 }, razaCruce: 'CN puro', fechaInicio: '2025-06-10', fechaEstimadaSiguienteFase: '2025-07-22', gallinero: 'Zona Cría', pesoMedio: 0.3, mortalidad: 1 },
+  { id: 'LOT-2025-008', nombre: 'Juveniles Verano', fase: 'Juvenil', animales: 22, desglose: { machos: 0, hembras: 0, sinSexar: 22 }, razaCruce: 'CN puro', fechaInicio: '2025-06-10', fechaEstimadaSiguienteFase: '2025-07-22', gallinero: 'Parque 3', pesoMedio: 0.3, mortalidad: 1 },
 ];
 
 /* ── helpers ── */
@@ -80,21 +80,19 @@ function LoteCard({ lote, col, onDetail, onContext, contextOpen, onContextAction
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.35 : 1,
     background: 'white', borderRadius: 10, padding: 10,
-    border: `1px solid ${col.border}30`, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    border: `1px solid ${col.border}30`,
+    boxShadow: isDragging ? `0 8px 24px ${col.border}33` : '0 1px 3px rgba(0,0,0,0.06)',
     position: 'relative', cursor: 'grab', touchAction: 'none',
   };
 
   const dias = daysBetween(lote.fechaInicio);
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      {/* Drag handle + header */}
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {/* Header — entire card is drag handle */}
       <div style={{ display: 'flex', alignItems: 'start', gap: 4 }}>
-        <div {...listeners} style={{ cursor: 'grab', color: 'var(--neutral-300)', flexShrink: 0, marginTop: 2 }}>
-          <GripVertical size={14} />
-        </div>
         <div style={{ flex: 1, minWidth: 0 }} onClick={onDetail}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neutral-800)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {lote.nombre}
@@ -188,15 +186,21 @@ function KanbanColumn({ col, lotes, children }: {
   col: typeof KANBAN_COLS[0]; lotes: Lote[]; children: React.ReactNode;
 }) {
   const Icon = col.icon;
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${col.fase}` });
   return (
     <div style={{
-      minWidth: 210, maxWidth: 240, flexShrink: 0, display: 'flex', flexDirection: 'column',
-      background: col.bg, borderRadius: 12, border: `2px solid ${col.border}33`,
+      minWidth: 240, maxWidth: 270, flexShrink: 0, display: 'flex', flexDirection: 'column',
+      background: isOver ? `${col.border}18` : col.bg,
+      borderRadius: 14, border: `2px solid ${isOver ? col.border : col.border + '33'}`,
+      boxShadow: isOver ? `0 0 0 2px ${col.border}44, 0 4px 16px ${col.border}22` : '0 1px 4px rgba(0,0,0,0.06)',
+      transition: 'all 0.2s ease',
     }}>
-      {/* Column header */}
+      {/* Column header — sticky */}
       <div style={{
         padding: '10px 12px', borderBottom: `3px solid ${col.border}`,
         display: 'flex', alignItems: 'center', gap: 6,
+        position: 'sticky', top: 0, zIndex: 2,
+        background: isOver ? `${col.border}18` : col.bg, borderRadius: '12px 12px 0 0',
       }}>
         <span style={{ fontSize: 16 }}>{col.emoji}</span>
         <span style={{ fontSize: 13, fontWeight: 800, color: col.border }}>{col.fase}</span>
@@ -208,20 +212,23 @@ function KanbanColumn({ col, lotes, children }: {
           {lotes.length}
         </span>
       </div>
-      {/* Cards area — scrollable */}
+      {/* Cards area — scrollable, droppable */}
       <SortableContext items={lotes.map(l => l.id)} strategy={verticalListSortingStrategy}>
-        <div style={{
-          padding: 8, flex: 1, overflowY: 'auto', maxHeight: 520,
+        <div ref={setNodeRef} style={{
+          padding: 8, flex: 1, overflowY: 'auto',
+          maxHeight: 'calc(100vh - 300px)',
           display: 'flex', flexDirection: 'column', gap: 8,
-          minHeight: 60,
+          minHeight: 80,
         }}>
           {children}
           {lotes.length === 0 && (
             <div style={{
-              textAlign: 'center', padding: '24px 8px', fontSize: 11, color: `${col.border}80`,
-              border: `2px dashed ${col.border}40`, borderRadius: 8, background: `${col.border}08`,
+              textAlign: 'center', padding: '32px 8px', fontSize: 12, color: `${col.border}99`,
+              border: `2px dashed ${isOver ? col.border : col.border + '40'}`,
+              borderRadius: 8, background: isOver ? `${col.border}15` : `${col.border}08`,
+              fontWeight: 600, transition: 'all 0.2s ease',
             }}>
-              Arrastra un lote aquí
+              {isOver ? '↓ Soltar aquí' : 'Arrastra un lote aquí'}
             </div>
           )}
         </div>
@@ -243,6 +250,7 @@ export default function ProductionPage() {
   const [divMachos, setDivMachos] = useState(0);
   const [divHembras, setDivHembras] = useState(0);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const dragOriginalFase = useRef<Fase | null>(null);
 
   // New lot form state
   const [newNombre, setNewNombre] = useState('');
@@ -270,8 +278,11 @@ export default function ProductionPage() {
 
   /* ── Drag handlers ── */
   function handleDragStart(e: DragStartEvent) {
-    setActiveDragId(e.active.id as string);
+    const id = e.active.id as string;
+    setActiveDragId(id);
     setContextMenu(null);
+    const lote = lotes.find(l => l.id === id);
+    if (lote) dragOriginalFase.current = lote.fase;
   }
 
   function handleDragOver(e: DragOverEvent) {
@@ -284,9 +295,10 @@ export default function ProductionPage() {
     const activeFase = findFaseForId(activeId);
     let overFase = findFaseForId(overId);
 
-    // If over is a column (fase name matches), treat it as dropping into that column
-    if (!overFase) {
-      const col = KANBAN_COLS.find(c => c.fase === overId);
+    // If over is a column droppable (id starts with col-), extract the fase
+    if (!overFase && overId.startsWith('col-')) {
+      const faseName = overId.replace('col-', '') as Fase;
+      const col = KANBAN_COLS.find(c => c.fase === faseName);
       if (col) overFase = col.fase;
     }
 
@@ -297,22 +309,23 @@ export default function ProductionPage() {
   }
 
   function handleDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
+    const { active } = e;
     setActiveDragId(null);
 
-    if (!over) return;
+    const origFase = dragOriginalFase.current;
+    dragOriginalFase.current = null;
+    if (!origFase) return;
 
-    const lote = INITIAL_LOTES.find(l => l.id === active.id) || lotes.find(l => l.id === active.id);
+    const lote = lotes.find(l => l.id === active.id);
     if (!lote) return;
 
-    const currentFase = lotes.find(l => l.id === active.id)?.fase;
-    const originalFase = INITIAL_LOTES.find(l => l.id === active.id)?.fase || lote.fase;
+    const currentFase = lote.fase;
 
-    // If the lote is now in a different column from its original, show confirmation
-    if (currentFase && currentFase !== originalFase) {
-      // Revert first, then confirm
-      setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, fase: originalFase } : l));
-      setConfirmMove({ lote: { ...lote, fase: originalFase }, from: originalFase, to: currentFase });
+    // If the lote is now in a different column from where it started, show confirmation
+    if (currentFase !== origFase) {
+      // Revert first, then show confirm dialog
+      setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, fase: origFase } : l));
+      setConfirmMove({ lote: { ...lote, fase: origFase }, from: origFase, to: currentFase });
     }
   }
 
@@ -322,6 +335,12 @@ export default function ProductionPage() {
     setLotes(prev => prev.map(l =>
       l.id === confirmMove.lote.id ? { ...l, fase: confirmMove.to, notas: `${l.notas ? l.notas + ' | ' : ''}Movido ${confirmMove.from}→${confirmMove.to} el ${now}` } : l
     ));
+    // Si va a Finalizado, redirigir al ERP (ventas/contabilidad)
+    if (confirmMove.to === 'Finalizado') {
+      setTimeout(() => {
+        window.location.href = '/erp';
+      }, 600);
+    }
     setConfirmMove(null);
   }
 
@@ -448,8 +467,8 @@ export default function ProductionPage() {
         onDragEnd={handleDragEnd}
       >
         <div style={{
-          display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 16,
-          minHeight: 400,
+          display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 16,
+          minHeight: 400, alignItems: 'flex-start',
         }}>
           {KANBAN_COLS.map(col => {
             const lots = lotesPerFase[col.fase] || [];
@@ -476,17 +495,21 @@ export default function ProductionPage() {
         </div>
 
         {/* Drag overlay — ghost card while dragging */}
-        <DragOverlay>
-          {activeDragLote ? (
-            <div style={{
-              background: 'white', borderRadius: 10, padding: 10,
-              border: '2px solid var(--primary-500)', boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-              width: 210, opacity: 0.9,
-            }}>
-              <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--neutral-800)' }}>{activeDragLote.nombre}</div>
-              <div style={{ fontSize: 11, color: 'var(--neutral-500)', marginTop: 4 }}>🐔 {activeDragLote.animales} · {activeDragLote.razaCruce}</div>
-            </div>
-          ) : null}
+        <DragOverlay dropAnimation={null}>
+          {activeDragLote ? (() => {
+            const dragCol = KANBAN_COLS.find(c => c.fase === (dragOriginalFase.current || activeDragLote.fase));
+            return (
+              <div style={{
+                background: 'white', borderRadius: 10, padding: 12,
+                border: `2px solid ${dragCol?.border || 'var(--primary-500)'}`,
+                boxShadow: `0 12px 32px rgba(0,0,0,0.2), 0 0 0 1px ${dragCol?.border || 'var(--primary-500)'}33`,
+                width: 230, transform: 'rotate(2deg)',
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--neutral-800)' }}>{activeDragLote.nombre}</div>
+                <div style={{ fontSize: 11, color: 'var(--neutral-500)', marginTop: 4 }}>🐔 {activeDragLote.animales} · {activeDragLote.razaCruce}</div>
+              </div>
+            );
+          })() : null}
         </DragOverlay>
       </DndContext>
 
@@ -522,6 +545,16 @@ export default function ProductionPage() {
                 {KANBAN_COLS.find(c => c.fase === confirmMove.to)?.emoji} {confirmMove.to}
               </span>?
             </p>
+            {confirmMove.to === 'Finalizado' && (
+              <div style={{
+                background: '#FFF3E0', border: '1px solid #EF6C0040', borderRadius: 8,
+                padding: '10px 12px', marginBottom: 16, fontSize: 13, color: '#E65100', lineHeight: 1.5,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <ExternalLink size={16} />
+                <span>Al finalizar, se abrirá el <strong>ERP</strong> para registrar la venta/contabilidad.</span>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setConfirmMove(null)} style={{
                 padding: '10px 20px', borderRadius: 8, border: '1px solid var(--neutral-200)',
@@ -530,7 +563,7 @@ export default function ProductionPage() {
               <button onClick={confirmMoveAction} className="nf-btn primary" style={{
                 display: 'flex', alignItems: 'center', gap: 6,
               }}>
-                Mover <ArrowRight size={14} />
+                {confirmMove.to === 'Finalizado' ? 'Finalizar y abrir ERP' : 'Mover'} <ArrowRight size={14} />
               </button>
             </div>
           </div>

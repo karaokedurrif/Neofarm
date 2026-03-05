@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
-// Hardcoded users (demo — matches capones-backend admin_routes pattern)
+// Hardcoded users (demo — matches ovosfera-api admin pattern)
 const DEMO_USERS: Array<User & { password: string }> = [
   { id: 1, name: 'Jesús', email: 'jesus@ovosfera.com', password: 'ovosfera2025', role: 'admin', avatar: '🧑‍🌾' },
   { id: 2, name: 'Fran', email: 'fran@ovosfera.com', password: 'ovosfera2025', role: 'socio', avatar: '👨‍🔬' },

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 /* ── Constants ── */
-const CAPONES_API = 'https://capones.ovosfera.com';
+const API_BASE = '/ext';
 
 /* ── Types ── */
 type Tab = 'plantel' | 'recommender';
@@ -47,16 +47,65 @@ interface RecommendResult {
   parse_error?: boolean;
 }
 
-/* ── Demo Plantel Data ── */
-const PLANTEL_DEMO = [
-  { id: 'AVE-001', nombre: 'Gallo Principal', raza: 'Castellana Negra', sexo: 'M' as const, edad: '2 años', peso: 3.1, notas: 'Reproductor #1, resistente' },
-  { id: 'AVE-002', nombre: 'Gallo Reserva', raza: 'Castellana Negra', sexo: 'M' as const, edad: '1.5 años', peso: 2.9, notas: 'Buen temperamento' },
-  { id: 'AVE-003', nombre: 'Gallina A1', raza: 'Castellana Negra', sexo: 'F' as const, edad: '2 años', peso: 2.3, notas: '165 huevos/año' },
-  { id: 'AVE-004', nombre: 'Gallina A2', raza: 'Castellana Negra', sexo: 'F' as const, edad: '1.5 años', peso: 2.4, notas: '172 huevos/año' },
-  { id: 'AVE-005', nombre: 'Gallina B1', raza: 'Plymouth Rock Barrada', sexo: 'F' as const, edad: '2 años', peso: 3.0, notas: '195 huevos/año' },
-  { id: 'AVE-006', nombre: 'Gallina B2', raza: 'Bresse', sexo: 'F' as const, edad: '1 año', peso: 2.8, notas: 'Importada de Francia' },
-  { id: 'AVE-007', nombre: 'Gallina C1', raza: 'Mos', sexo: 'F' as const, edad: '3 años', peso: 2.7, notas: 'Raza autóctona gallega' },
-  { id: 'AVE-008', nombre: 'Gallina C2', raza: 'Prat Leonada', sexo: 'F' as const, edad: '1.5 años', peso: 2.3, notas: 'Piel blanca, carne premium' },
+/* ── Plantel: loaded from localStorage (shared with /aves page) ── */
+interface PlantelAve {
+  id: string;
+  nombre: string;
+  raza: string;
+  sexo: 'M' | 'H';
+  edad: string;
+  peso: number;
+  notas: string;
+  color?: string;
+  fenotipo?: string;
+  genotipo?: string;
+}
+
+function calcEdadStr(fechaNac: string): string {
+  const d = new Date(fechaNac);
+  const now = new Date();
+  const months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+  if (months < 1) return '< 1 mes';
+  if (months < 12) return `${months} meses`;
+  const y = Math.floor(months / 12);
+  const r = months % 12;
+  return r > 0 ? `${y}a ${r}m` : `${y} años`;
+}
+
+function loadPlantelFromStorage(): PlantelAve[] {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('ovosfera_aves') : null;
+    if (!raw) return [];
+    const aves = JSON.parse(raw) as any[];
+    // Filter: only Reproductor estado
+    return aves
+      .filter((a: any) => a.estado === 'Reproductor')
+      .map((a: any) => ({
+        id: a.anilla || `AVE-${a.id}`,
+        nombre: `${a.tipo} ${a.raza.split(' ')[0]}-${String(a.id).padStart(2, '0')}`,
+        raza: a.raza,
+        sexo: a.sexo as 'M' | 'H',
+        edad: calcEdadStr(a.fechaNac),
+        peso: a.peso,
+        notas: a.estado,
+        color: a.color,
+        fenotipo: a.fenotipo,
+        genotipo: a.genotipo,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+const PLANTEL_FALLBACK: PlantelAve[] = [
+  { id: 'OVS-2025-0020', nombre: 'Gallo CN-01', raza: 'Castellana Negra', sexo: 'M', edad: '4 años', peso: 3.2, notas: 'Reproductor principal' },
+  { id: 'OVS-2025-0021', nombre: 'Gallo PL-01', raza: 'Prat Leonada', sexo: 'M', edad: '3 años', peso: 3.5, notas: 'Reproductor reserva' },
+  { id: 'OVS-2025-0001', nombre: 'Gallina CN-01', raza: 'Castellana Negra', sexo: 'H', edad: '2 años', peso: 2.2, notas: 'Ponedora activa' },
+  { id: 'OVS-2025-0002', nombre: 'Gallina PL-01', raza: 'Prat Leonada', sexo: 'H', edad: '1 año', peso: 2.5, notas: 'Ponedora activa' },
+  { id: 'OVS-2025-0003', nombre: 'Gallina PR-01', raza: 'Plymouth Rock', sexo: 'H', edad: '2 años', peso: 2.8, notas: 'Ponedora activa' },
+  { id: 'OVS-2025-0004', nombre: 'Gallina SX-01', raza: 'Sussex', sexo: 'H', edad: '1 año', peso: 2.6, notas: 'Ponedora activa' },
+  { id: 'OVS-2025-0005', nombre: 'Gallina CN-02', raza: 'Castellana Negra', sexo: 'H', edad: '1 año', peso: 2.3, notas: 'Ponedora activa' },
+  { id: 'OVS-2025-0006', nombre: 'Gallina PL-02', raza: 'Prat Leonada', sexo: 'H', edad: '1 año', peso: 2.4, notas: 'Ponedora activa' },
 ];
 
 /* ══════════════════════════════════════════════════════
@@ -90,6 +139,20 @@ export default function GeneticsPage() {
   const [tab, setTab] = useState<Tab>('recommender');
   const [breeds, setBreeds] = useState<BreedSummary[]>([]);
   const [loadingBreeds, setLoadingBreeds] = useState(true);
+
+  // Plantel from localStorage (synced with /aves)
+  const [plantel, setPlantel] = useState<PlantelAve[]>(PLANTEL_FALLBACK);
+  useEffect(() => {
+    const stored = loadPlantelFromStorage();
+    if (stored.length > 0) setPlantel(stored);
+    // Listen for storage events from /aves page
+    const handler = () => {
+      const updated = loadPlantelFromStorage();
+      if (updated.length > 0) setPlantel(updated);
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
 
   // Recommender state
   const [objectives, setObjectives] = useState<ObjectiveSlider[]>([
@@ -125,7 +188,7 @@ export default function GeneticsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${CAPONES_API}/api/genetics/breeds-summary`);
+        const res = await fetch(`${API_BASE}/api/genetics/breeds-summary`);
         if (res.ok) {
           const data = await res.json();
           setBreeds(data.breeds || []);
@@ -149,7 +212,7 @@ export default function GeneticsPage() {
       generaciones_plan: generaciones,
     };
     try {
-      const res = await fetch(`${CAPONES_API}/api/genetics/recommend`, {
+      const res = await fetch(`${API_BASE}/api/genetics/recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -197,7 +260,7 @@ export default function GeneticsPage() {
     setChatHistory(h => [...h, { role: 'user', text: msg }]);
     setChatLoading(true);
     try {
-      const res = await fetch(`${CAPONES_API}/api/genetics/chat`, {
+      const res = await fetch(`${API_BASE}/api/genetics/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg }),
@@ -209,7 +272,7 @@ export default function GeneticsPage() {
         setChatHistory(h => [...h, { role: 'assistant', text: '⚠️ Error conectando con IA. Verifica ANTHROPIC_API_KEY en el backend.' }]);
       }
     } catch {
-      setChatHistory(h => [...h, { role: 'assistant', text: '⚠️ Backend no disponible. Asegúrate de que capones-backend esté activo.' }]);
+      setChatHistory(h => [...h, { role: 'assistant', text: '⚠️ Backend no disponible. Verifica que el servidor API esté activo.' }]);
     }
     setChatLoading(false);
   }, [chatMsg]);
@@ -256,13 +319,18 @@ export default function GeneticsPage() {
       {/* ═══════════ PLANTEL TAB ═══════════ */}
       {tab === 'plantel' && (
         <div>
+          {/* Source info */}
+          <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 8, fontSize: 12, background: 'rgba(176,125,43,0.06)', border: '1px solid rgba(176,125,43,0.15)', color: 'var(--neutral-600)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            🧬 Mostrando aves con estado <strong style={{ color: '#B07D2B' }}>Reproductor</strong> del inventario.
+            <a href="/aves" style={{ marginLeft: 'auto', color: '#B07D2B', fontWeight: 600, textDecoration: 'none' }}>Ir a Inventario →</a>
+          </div>
           {/* KPIs */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
             {[
-              { v: PLANTEL_DEMO.length, l: 'Total aves', c: 'var(--primary-600)', e: '🐔' },
-              { v: PLANTEL_DEMO.filter(a => a.sexo === 'M').length, l: 'Machos', c: '#3B82F6', e: '♂' },
-              { v: PLANTEL_DEMO.filter(a => a.sexo === 'F').length, l: 'Hembras', c: '#EC4899', e: '♀' },
-              { v: [...new Set(PLANTEL_DEMO.map(a => a.raza))].length, l: 'Razas', c: '#8B5CF6', e: '🧬' },
+              { v: plantel.length, l: 'Total aves', c: 'var(--primary-600)', e: '🐔' },
+              { v: plantel.filter(a => a.sexo === 'M').length, l: 'Machos', c: '#3B82F6', e: '♂' },
+              { v: plantel.filter(a => a.sexo === 'H').length, l: 'Hembras', c: '#EC4899', e: '♀' },
+              { v: [...new Set(plantel.map(a => a.raza))].length, l: 'Razas', c: '#8B5CF6', e: '🧬' },
             ].map(k => (
               <div key={k.l} style={{ background: 'white', borderRadius: 10, padding: '10px 16px', border: '1px solid var(--neutral-100)', minWidth: 100 }}>
                 <div style={{ fontSize: 20, fontWeight: 800, color: k.c, fontFamily: 'var(--font-mono)' }}>{k.e} {k.v}</div>
@@ -282,7 +350,7 @@ export default function GeneticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {PLANTEL_DEMO.map(a => (
+                {plantel.map(a => (
                   <tr key={a.id} style={{ borderBottom: '1px solid var(--neutral-50)' }}>
                     <td style={{ padding: '8px 12px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--neutral-400)' }}>{a.id}</td>
                     <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--neutral-800)' }}>{a.nombre}</td>

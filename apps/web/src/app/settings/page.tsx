@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Settings as SettingsIcon, Users, ChevronRight, ChevronLeft, Check,
-  Clock, Lightbulb, HandCoins, BarChart3, Vote, FileText, Lock
+  Clock, Lightbulb, HandCoins, BarChart3, Vote, FileText
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -79,32 +79,6 @@ const HERRAMIENTAS_OPTIONS = [
   'Módulo de ventas y facturación', 'Simulador de escenarios',
 ];
 
-const SIMULATED: Record<string, Respuesta> = {
-  david: {
-    userId: 'david', nombre: 'David',
-    r1: { tiempo: '10-20 horas', horarios: 'En la finca, mañanas y tardes entre semana',
-      ideas: ['Capones gourmet para Navidad (producción estacional, alto margen)', 'Huevos ecológicos venta directa (producción continua, margen medio)'],
-      ideaOtra: '', aportaciones: ['Terreno y espacio', 'Conocimiento ganadero / agrícola', 'Mano de obra diaria'], aportacionOtra: '' },
-    r2: { inversion: '1.000-3.000€', decision: 'Mayoría simple', reparto: 'Proporcional a dedicación' },
-    r3: { objetivo1y: ['Primer lote de capones vendido en Navidad', 'Infraestructura básica completada'], kpis: ['Rentabilidad por ave (€/ave)', 'Tasa de mortalidad (%)'], riesgos: ['Enfermedades / epidemia aviar', 'Depredadores (zorros, etc.)'], herramientas: ['Dashboard de producción en tiempo real', 'Alertas automáticas (salud, stock)'] },
-  },
-  jesus: {
-    userId: 'jesus', nombre: 'Jesús',
-    r1: { tiempo: '5-10 horas', horarios: 'Cocina y fines de semana, alguna tarde',
-      ideas: ['Capones gourmet para Navidad (producción estacional, alto margen)', 'Huevos ecológicos venta directa (producción continua, margen medio)', 'Agroturismo: visitas a la granja + venta in situ'],
-      ideaOtra: '', aportaciones: ['Cocina y transformación (elaborados)', 'Contactos comerciales (restaurantes, tiendas, mercados)', 'Capital para inversión inicial'], aportacionOtra: '' },
-    r2: { inversion: '500-1.000€', decision: 'El que más sabe del tema', reparto: 'Partes iguales (33/33/33)' },
-    r3: { objetivo1y: ['Primer lote de capones vendido en Navidad', 'Red de 5+ restaurantes compradores'], kpis: ['Satisfacción del cliente (NPS)', 'Ingresos mensuales'], riesgos: ['No encontrar mercado / clientes', 'Costes superiores a lo previsto'], herramientas: ['Módulo de ventas y facturación', 'Registro digital de trazabilidad'] },
-  },
-  fran: {
-    userId: 'fran', nombre: 'Fran',
-    r1: { tiempo: '2-5 horas', horarios: 'Tech y remoto, flexible por la noche',
-      ideas: ['Capones gourmet para Navidad (producción estacional, alto margen)', 'Conservación de razas autóctonas + genética (nicho, prestigio)'],
-      ideaOtra: '', aportaciones: ['Tecnología y digitalización', 'Marketing y ventas'], aportacionOtra: '' },
-    r2: { inversion: '500-1.000€', decision: 'Mayoría simple', reparto: 'Partes iguales (33/33/33)' },
-    r3: { objetivo1y: ['Web/tienda online operativa', 'Marca comercial registrada'], kpis: ['Huella de carbono neta', 'Diversidad genética del plantel'], riesgos: ['Falta de tiempo de los socios', 'Burocracia y permisos'], herramientas: ['Análisis genético / recomendador IA', 'Simulador de escenarios'] },
-  },
-};
 
 /* ══════════════════════════════════════════════════════
    COMPONENT
@@ -128,36 +102,50 @@ export default function SettingsPage() {
   const [kpis, setKpis] = useState<string[]>([]);
   const [riesgos, setRiesgos] = useState<string[]>([]);
   const [herramientas, setHerramientas] = useState<string[]>([]);
-  const [claudeReport, setClaudeReport] = useState('');
-  const [claudeLoading, setClaudeLoading] = useState(false);
-  const [waiting, setWaiting] = useState(false);
-
   const currentUserId = user?.name?.toLowerCase() || 'david';
-  const otherSocios = SOCIOS.filter(s => s.id !== currentUserId);
 
-  function simulateWait(waitStep: Step, next: Step) {
-    setStep(waitStep);
-    setWaiting(true);
-    setTimeout(() => { setWaiting(false); setStep(next); }, 3000);
+  /* ── localStorage persistence ── */
+  const WIZARD_KEY = `wizard_${currentUserId}`;
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(WIZARD_KEY);
+      if (saved) {
+        const d = JSON.parse(saved);
+        if (d.step) setStep(d.step);
+        if (d.tiempo) setTiempo(d.tiempo);
+        if (d.horarios) setHorarios(d.horarios);
+        if (d.ideas) setIdeas(d.ideas);
+        if (d.ideaOtra) setIdeaOtra(d.ideaOtra);
+        if (d.aportaciones) setAportaciones(d.aportaciones);
+        if (d.aportacionOtra) setAportacionOtra(d.aportacionOtra);
+        if (d.inversion) setInversion(d.inversion);
+        if (d.decision) setDecision(d.decision);
+        if (d.reparto) setReparto(d.reparto);
+        if (d.objetivo1y) setObjetivo1y(d.objetivo1y);
+        if (d.kpis) setKpis(d.kpis);
+        if (d.riesgos) setRiesgos(d.riesgos);
+        if (d.herramientas) setHerramientas(d.herramientas);
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function saveProgress(nextStep: Step) {
+    try {
+      localStorage.setItem(WIZARD_KEY, JSON.stringify({
+        step: nextStep, tiempo, horarios, ideas, ideaOtra,
+        aportaciones, aportacionOtra, inversion, decision, reparto,
+        objetivo1y, kpis, riesgos, herramientas,
+      }));
+    } catch {}
+    setStep(nextStep);
   }
 
-  function getAllR1(): Respuesta[] {
-    const mine: Respuesta = {
-      userId: currentUserId, nombre: user?.name || 'Tú',
-      r1: { tiempo, horarios, ideas, ideaOtra, aportaciones, aportacionOtra },
-      r2: { inversion, decision, reparto },
-      r3: { objetivo1y, kpis, riesgos, herramientas },
-    };
-    return SOCIOS.map(s => s.id === currentUserId ? mine : SIMULATED[s.id]);
-  }
-
-  function countIdeas() {
-    const all = getAllR1();
-    const counts: Record<string, number> = {};
-    IDEAS.forEach(idea => { counts[idea] = 0; });
-    all.forEach(r => r.r1.ideas.forEach(i => { counts[i] = (counts[i] || 0) + 1; }));
-    return Object.entries(counts).filter(([_, c]) => c > 0).sort((a, b) => b[1] - a[1]);
-  }
+  /* ── Round completion checks ── */
+  const r1Done = !!(tiempo && ideas.length > 0 && aportaciones.length > 0);
+  const r2Done = !!(inversion && decision && reparto);
+  const r3Done = !!(objetivo1y.length > 0 && kpis.length > 0 && riesgos.length > 0 && herramientas.length > 0);
 
   /* ── Styles ── */
   const card: React.CSSProperties = {
@@ -264,6 +252,25 @@ export default function SettingsPage() {
                 transition: 'width .3s',
               }} />
             </div>
+            {/* Reset button */}
+            {step !== 'intro' && (
+              <div style={{ textAlign: 'right', marginTop: 6 }}>
+                <button
+                  onClick={() => {
+                    if (!confirm('¿Resetear todas las respuestas del wizard? Se perderán tus respuestas guardadas.')) return;
+                    setStep('intro');
+                    setTiempo(''); setHorarios(''); setIdeas([]); setIdeaOtra('');
+                    setAportaciones([]); setAportacionOtra(''); setInversion('');
+                    setDecision(''); setReparto('');
+                    setObjetivo1y([]); setKpis([]); setRiesgos([]); setHerramientas([]);
+                    try { localStorage.removeItem(`wizard_${currentUserId}`); } catch {}
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--neutral-400)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  🔄 Resetear mis respuestas
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ── INTRO ── */}
@@ -273,8 +280,9 @@ export default function SettingsPage() {
                 <div style={{ fontSize: 48, marginBottom: 12 }}>🤝</div>
                 <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: 'var(--neutral-900)' }}>Wizard de Socios</h2>
                 <p style={{ color: 'var(--neutral-500)', fontSize: 14, lineHeight: 1.6, maxWidth: 500, margin: '0 auto' }}>
-                  Antes de empezar con la granja, los 3 socios debéis responder unas preguntas
-                  sobre vuestra visión, compromiso y aportaciones. Las respuestas son <strong>individuales y privadas</strong> hasta que los 3 hayáis contestado cada ronda.
+                  Responde las preguntas sobre tu visión, compromiso y aportaciones al proyecto.
+                  Tus respuestas se guardan localmente. Cuando los 3 socios hayáis respondido,
+                  se generará el informe comparativo.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>
@@ -287,8 +295,8 @@ export default function SettingsPage() {
                   }}>
                     <div style={{ fontSize: 28 }}>{s.avatar}</div>
                     <div style={{ fontWeight: 700, fontSize: 13, marginTop: 4, color: 'var(--neutral-800)' }}>{s.nombre}</div>
-                    <div style={{ fontSize: 11, color: s.id === currentUserId ? 'var(--primary-500)' : 'var(--neutral-500)' }}>
-                      {s.id === currentUserId ? '← Tú' : 'Pendiente'}
+                    <div style={{ fontSize: 11, color: s.id === currentUserId ? 'var(--primary-500)' : 'var(--neutral-400)' }}>
+                      {s.id === currentUserId ? '← Tú' : '⏳ No ha respondido'}
                     </div>
                   </div>
                 ))}
@@ -375,150 +383,68 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <button onClick={() => setStep('r1q2')} style={btnBack}><ChevronLeft size={16} /> Atrás</button>
-                <button onClick={() => simulateWait('r1_wait', 'r1_results')} disabled={aportaciones.length === 0} style={{ ...btnP, opacity: aportaciones.length > 0 ? 1 : 0.5 }}>
-                  Enviar y esperar socios <Check size={16} />
+                <button onClick={() => saveProgress('r1_results')} disabled={aportaciones.length === 0} style={{ ...btnP, opacity: aportaciones.length > 0 ? 1 : 0.5 }}>
+                  Guardar y continuar <Check size={16} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── R1 WAIT (locked — can't see responses) ── */}
-          {step === 'r1_wait' && (
-            <div style={card}>
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Lock size={48} style={{ color: 'var(--primary-500)', marginBottom: 16 }} />
-                <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--neutral-900)' }}>Ronda 1 enviada</h2>
-                <p style={{ color: 'var(--neutral-500)', fontSize: 14, lineHeight: 1.6, maxWidth: 400, margin: '0 auto 20px' }}>
-                  Tus respuestas han sido registradas. Las respuestas de los demás socios permanecen <strong>ocultas</strong> hasta que todos hayan respondido.
-                </p>
-                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 20 }}>
-                  {SOCIOS.map(s => (
-                    <div key={s.id} style={{
-                      padding: '10px 14px', borderRadius: 10, textAlign: 'center',
-                      background: s.id === currentUserId ? 'rgba(34,197,94,0.1)' : 'var(--neutral-50)',
-                      border: `1px solid ${s.id === currentUserId ? 'var(--ok)' : 'var(--neutral-200)'}`,
-                      minWidth: 80,
-                    }}>
-                      <div style={{ fontSize: 24 }}>{s.avatar}</div>
-                      <div style={{ fontWeight: 600, fontSize: 12, marginTop: 2, color: 'var(--neutral-800)' }}>{s.nombre}</div>
-                      <div style={{ fontSize: 11, color: s.id === currentUserId ? 'var(--ok)' : '#F59E0B', fontWeight: 600 }}>
-                        {s.id === currentUserId ? '✅ Enviado' : '⏳ Pendiente'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {waiting ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <div style={{ fontSize: 14, color: 'var(--neutral-500)' }}>Esperando respuestas…</div>
-                    <div style={{ width: 120, height: 4, background: 'var(--neutral-200)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', background: 'var(--primary-500)', borderRadius: 2, width: '60%',
-                        animation: 'progressSlide 1.5s ease-in-out infinite',
-                      }} />
-                    </div>
-                  </div>
-                ) : (
-                  <p style={{ color: 'var(--neutral-400)', fontSize: 13 }}>
-                    No podrás ver las respuestas de los otros socios hasta la siguiente ronda.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          {/* ── R1 WAIT (unused — skip directly to results) ── */}
 
-          {/* ── R1 RESULTS ── */}
+          {/* ── R1 RESULTS — Resumen de tus respuestas ── */}
           {step === 'r1_results' && (
             <div style={{ ...card, maxWidth: 850 }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>📊</div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Resultados Ronda 1</h2>
-                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Los 3 socios han respondido</p>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Ronda 1 completada</h2>
+                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Tus respuestas han sido guardadas</p>
               </div>
 
-              {/* Time comparison */}
+              {/* Tu resumen */}
               <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>⏰ Tiempo disponible</div>
-                {getAllR1().map(r => (
-                  <div key={r.userId} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', fontSize: 13 }}>
-                    <span style={{ width: 70, fontWeight: 600, color: 'var(--neutral-800)' }}>{r.nombre}:</span>
-                    <span style={{ color: 'var(--primary-600)' }}>{r.r1.tiempo}</span>
-                    <span style={{ color: 'var(--neutral-500)', fontSize: 11 }}>({r.r1.horarios})</span>
-                  </div>
-                ))}
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>⏰ Tu tiempo disponible</div>
+                <div style={{ fontSize: 13, color: 'var(--primary-600)', fontWeight: 600 }}>{tiempo}</div>
+                {horarios && <div style={{ fontSize: 12, color: 'var(--neutral-500)', marginTop: 4 }}>{horarios}</div>}
               </div>
 
-              {/* Ideas consensus */}
               <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>💡 Ideas de negocio (consenso)</div>
-                {countIdeas().map(([idea, count]) => (
-                  <div key={idea} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', fontSize: 12 }}>
-                    <span style={{
-                      color: count === 3 ? 'var(--ok)' : count === 2 ? '#F59E0B' : 'var(--neutral-400)',
-                      fontWeight: 700, minWidth: 20,
-                    }}>
-                      {count === 3 ? '✅' : count === 2 ? '⚠️' : '○'} {count}/3
-                    </span>
-                    <span style={{ color: 'var(--neutral-700)' }}>{idea}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Contributions */}
-              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>🤝 Aportaciones</div>
-                {getAllR1().map(r => (
-                  <div key={r.userId} style={{ marginBottom: 10 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--neutral-800)' }}>
-                      {SOCIOS.find(s => s.id === r.userId)?.avatar} {r.nombre}:
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {r.r1.aportaciones.map(a => (
-                        <span key={a} style={{
-                          background: 'rgba(139,92,246,0.1)', color: 'var(--primary-600)',
-                          padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                        }}>✅ {a}</span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* AI Analysis */}
-              <div style={{
-                background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)',
-                borderRadius: 12, padding: 16, marginBottom: 20,
-              }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'start', marginBottom: 12 }}>
-                  <span style={{ fontSize: 20 }}>🤖</span>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--neutral-800)' }}>Análisis de Seedy IA</div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>💡 Tus ideas de negocio</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {ideas.map(idea => (
+                    <div key={idea} style={{ fontSize: 12, color: 'var(--neutral-700)', padding: '4px 0' }}>• {idea}</div>
+                  ))}
+                  {ideaOtra && <div style={{ fontSize: 12, color: 'var(--primary-600)', padding: '4px 0' }}>• {ideaOtra}</div>}
                 </div>
-                <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--neutral-600)', margin: '0 0 12px' }}>
-                  "Buen equipo complementario. David aporta la base operativa (terreno + conocimiento + tiempo),
-                  Jesús el valor añadido comercial (cocina + contactos), y Fran la digitalización.
-                  Recomiendo los siguientes roles:"
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[
-                    { icon: '🏠', nombre: 'David', rol: 'Director de producción', desc: 'Día a día de la granja, decisiones técnicas de manejo' },
-                    { icon: '🍳', nombre: 'Jesús', rol: 'Director comercial y producto', desc: 'Relación restaurantes, diseño de producto final, elaborados' },
-                    { icon: '💻', nombre: 'Fran', rol: 'Director de tecnología', desc: 'Plataforma OvoSfera, automatización, análisis de datos' },
-                  ].map(r => (
-                    <div key={r.nombre} style={{
-                      display: 'flex', gap: 10, alignItems: 'center',
-                      padding: '10px 12px', background: 'var(--neutral-50)', borderRadius: 10, border: '1px solid var(--neutral-200)',
-                    }}>
-                      <span style={{ fontSize: 24 }}>{r.icon}</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--neutral-800)' }}>{r.nombre} → <span style={{ color: 'var(--primary-600)' }}>{r.rol}</span></div>
-                        <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>{r.desc}</div>
-                      </div>
-                    </div>
+              </div>
+
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>🤝 Tus aportaciones</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {aportaciones.map(a => (
+                    <span key={a} style={{
+                      background: 'rgba(139,92,246,0.1)', color: 'var(--primary-600)',
+                      padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                    }}>✅ {a}</span>
                   ))}
                 </div>
               </div>
 
+              {/* Esperando socios */}
+              <div style={{
+                background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
+                borderRadius: 12, padding: 16, marginBottom: 20, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 20, marginBottom: 8 }}>⏳</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--neutral-800)', marginBottom: 6 }}>Esperando a los otros socios</div>
+                <p style={{ fontSize: 12, color: 'var(--neutral-500)', margin: 0, lineHeight: 1.6 }}>
+                  Cuando Jesús y Fran completen la Ronda 1, podrás ver el análisis comparativo.
+                  Mientras tanto, puedes continuar con la siguiente ronda.
+                </p>
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button onClick={() => setStep('r2q4')} style={btnP}>
+                <button onClick={() => saveProgress('r2q4')} style={btnP}>
                   Continuar a Ronda 2 <ChevronRight size={16} />
                 </button>
               </div>
@@ -583,88 +509,54 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <button onClick={() => setStep('r2q5')} style={btnBack}><ChevronLeft size={16} /> Atrás</button>
-                <button onClick={() => simulateWait('r2_wait', 'r2_results')} disabled={!reparto} style={{ ...btnP, opacity: reparto ? 1 : 0.5 }}>
-                  Enviar y esperar socios <Check size={16} />
+                <button onClick={() => saveProgress('r2_results')} disabled={!reparto} style={{ ...btnP, opacity: reparto ? 1 : 0.5 }}>
+                  Guardar y continuar <Check size={16} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── R2 WAIT (locked) ── */}
-          {step === 'r2_wait' && (
-            <div style={card}>
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Lock size={48} style={{ color: '#F59E0B', marginBottom: 16 }} />
-                <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--neutral-900)' }}>Ronda 2 enviada</h2>
-                <p style={{ color: 'var(--neutral-500)', fontSize: 14, lineHeight: 1.6, maxWidth: 400, margin: '0 auto 20px' }}>
-                  Tus respuestas han sido registradas. Las respuestas de los otros socios permanecen <strong>ocultas</strong> hasta que todos hayan respondido.
-                </p>
-                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 20 }}>
-                  {SOCIOS.map(s => (
-                    <div key={s.id} style={{
-                      padding: '10px 14px', borderRadius: 10, textAlign: 'center',
-                      background: s.id === currentUserId ? 'rgba(34,197,94,0.1)' : 'var(--neutral-50)',
-                      border: `1px solid ${s.id === currentUserId ? 'var(--ok)' : 'var(--neutral-200)'}`,
-                      minWidth: 80,
-                    }}>
-                      <div style={{ fontSize: 24 }}>{s.avatar}</div>
-                      <div style={{ fontWeight: 600, fontSize: 12, marginTop: 2, color: 'var(--neutral-800)' }}>{s.nombre}</div>
-                      <div style={{ fontSize: 11, color: s.id === currentUserId ? 'var(--ok)' : '#F59E0B', fontWeight: 600 }}>
-                        {s.id === currentUserId ? '✅ Enviado' : '⏳ Pendiente'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {waiting ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <div style={{ fontSize: 14, color: 'var(--neutral-500)' }}>Esperando respuestas…</div>
-                    <div style={{ width: 120, height: 4, background: 'var(--neutral-200)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', background: '#F59E0B', borderRadius: 2, width: '60%',
-                        animation: 'progressSlide 1.5s ease-in-out infinite',
-                      }} />
-                    </div>
-                  </div>
-                ) : (
-                  <p style={{ color: 'var(--neutral-400)', fontSize: 13 }}>
-                    No podrás ver las respuestas hasta la siguiente ronda.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          {/* ── R2 WAIT — unused, skip directly ── */}
 
-          {/* ── R2 RESULTS ── */}
+          {/* ── R2 RESULTS — Resumen de tus respuestas ── */}
           {step === 'r2_results' && (
             <div style={{ ...card, maxWidth: 850 }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>📋</div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Resultados Ronda 2</h2>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Ronda 2 completada</h2>
+                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Tus respuestas han sido guardadas</p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-                {getAllR1().map(r => (
-                  <div key={r.userId} style={{
-                    background: 'var(--neutral-50)', borderRadius: 12, padding: 14,
-                    border: '1px solid var(--neutral-200)',
-                  }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, textAlign: 'center', color: 'var(--neutral-800)' }}>
-                      {SOCIOS.find(s => s.id === r.userId)?.avatar} {r.nombre}
-                    </div>
-                    {[
-                      { l: 'Inversión', v: r.r2.inversion },
-                      { l: 'Decisiones', v: r.r2.decision },
-                      { l: 'Reparto', v: r.r2.reparto },
-                    ].map(item => (
-                      <div key={item.l} style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>{item.l}</div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-800)' }}>{item.v}</div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
+
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>💰 Tu inversión</div>
+                <div style={{ fontSize: 13, color: 'var(--primary-600)', fontWeight: 600 }}>{inversion}</div>
               </div>
+
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>🗳️ Toma de decisiones</div>
+                <div style={{ fontSize: 13, color: 'var(--primary-600)', fontWeight: 600 }}>{decision}</div>
+              </div>
+
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>📊 Reparto de beneficios</div>
+                <div style={{ fontSize: 13, color: 'var(--primary-600)', fontWeight: 600 }}>{reparto}</div>
+              </div>
+
+              {/* Esperando socios */}
+              <div style={{
+                background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
+                borderRadius: 12, padding: 16, marginBottom: 20, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 20, marginBottom: 8 }}>⏳</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--neutral-800)', marginBottom: 6 }}>Esperando a los otros socios</div>
+                <p style={{ fontSize: 12, color: 'var(--neutral-500)', margin: 0, lineHeight: 1.6 }}>
+                  Cuando Jesús y Fran completen la Ronda 2, podrás ver las comparativas.
+                  Mientras tanto, continúa con la última ronda.
+                </p>
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button onClick={() => setStep('r3q7')} style={btnP}>
+                <button onClick={() => saveProgress('r3q7')} style={btnP}>
                   Continuar a Ronda 3 <ChevronRight size={16} />
                 </button>
               </div>
@@ -754,223 +646,141 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <button onClick={() => setStep('r3q9')} style={btnBack}><ChevronLeft size={16} /> Atrás</button>
-                <button onClick={() => simulateWait('r3_wait', 'r3_results')} disabled={herramientas.length === 0} style={{ ...btnP, opacity: herramientas.length > 0 ? 1 : 0.5 }}>
-                  Enviar y generar informe IA <Check size={16} />
+                <button onClick={() => saveProgress('r3_results')} disabled={herramientas.length === 0} style={{ ...btnP, opacity: herramientas.length > 0 ? 1 : 0.5 }}>
+                  Guardar y finalizar <Check size={16} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── R3 WAIT ── */}
-          {step === 'r3_wait' && (
-            <div style={card}>
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <Lock size={48} style={{ color: '#10B981', marginBottom: 16 }} />
-                <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--neutral-900)' }}>Ronda 3 enviada</h2>
-                <p style={{ color: 'var(--neutral-500)', fontSize: 14, lineHeight: 1.6, maxWidth: 400, margin: '0 auto 20px' }}>
-                  Esperando a que los 3 socios completen la ronda de inteligencia de negocio…
-                </p>
-                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 20 }}>
-                  {SOCIOS.map(s => (
-                    <div key={s.id} style={{
-                      padding: '10px 14px', borderRadius: 10, textAlign: 'center',
-                      background: s.id === currentUserId ? 'rgba(34,197,94,0.1)' : 'var(--neutral-50)',
-                      border: `1px solid ${s.id === currentUserId ? 'var(--ok)' : 'var(--neutral-200)'}`,
-                      minWidth: 80,
-                    }}>
-                      <div style={{ fontSize: 24 }}>{s.avatar}</div>
-                      <div style={{ fontWeight: 600, fontSize: 12, marginTop: 2, color: 'var(--neutral-800)' }}>{s.nombre}</div>
-                      <div style={{ fontSize: 11, color: s.id === currentUserId ? 'var(--ok)' : '#F59E0B', fontWeight: 600 }}>
-                        {s.id === currentUserId ? '✅ Enviado' : '⏳ Pendiente'}
-                      </div>
-                    </div>
+          {/* ── R3 WAIT — unused, skip directly ── */}
+
+          {/* ── R3 RESULTS — Resumen final de tus respuestas ── */}
+          {step === 'r3_results' && (
+            <div style={{ ...card, maxWidth: 850 }}>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Ronda 3 completada</h2>
+                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Tus respuestas de inteligencia de negocio</p>
+              </div>
+
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>🎯 Tus objetivos a 1 año</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {objetivo1y.map(o => (
+                    <div key={o} style={{ fontSize: 12, color: 'var(--neutral-700)' }}>• {o}</div>
                   ))}
                 </div>
-                {waiting && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <div style={{ fontSize: 14, color: 'var(--neutral-500)' }}>🤖 Seedy IA está generando el informe…</div>
-                    <div style={{ width: 120, height: 4, background: 'var(--neutral-200)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', background: '#10B981', borderRadius: 2, width: '60%', animation: 'progressSlide 1.5s ease-in-out infinite' }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── R3 RESULTS (Claude Report) ── */}
-          {step === 'r3_results' && (
-            <div style={{ ...card, maxWidth: 900 }}>
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>🤖</div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Informe Seedy IA — Ronda 3</h2>
-                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Análisis de inteligencia de negocio basado en las respuestas de los 3 socios</p>
               </div>
 
-              {/* Objetivos consensus */}
               <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>🎯 Objetivos a 1 año (consenso)</div>
-                {(() => {
-                  const counts: Record<string, number> = {};
-                  getAllR1().forEach(r => r.r3.objetivo1y.forEach(o => { counts[o] = (counts[o] || 0) + 1; }));
-                  return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([obj, count]) => (
-                    <div key={obj} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', fontSize: 12 }}>
-                      <span style={{ color: count === 3 ? 'var(--ok)' : count === 2 ? '#F59E0B' : 'var(--neutral-400)', fontWeight: 700, minWidth: 20 }}>
-                        {count === 3 ? '✅' : count === 2 ? '⚠️' : '○'} {count}/3
-                      </span>
-                      <span style={{ color: 'var(--neutral-700)' }}>{obj}</span>
-                    </div>
-                  ));
-                })()}
-              </div>
-
-              {/* KPIs priority */}
-              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>📊 KPIs prioritarios</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {(() => {
-                    const counts: Record<string, number> = {};
-                    getAllR1().forEach(r => r.r3.kpis.forEach(k => { counts[k] = (counts[k] || 0) + 1; }));
-                    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([kpi, count]) => (
-                      <span key={kpi} style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                        background: count >= 2 ? 'rgba(22,163,74,0.1)' : 'var(--neutral-100)',
-                        color: count >= 2 ? 'var(--ok)' : 'var(--neutral-600)',
-                        border: `1px solid ${count >= 2 ? 'rgba(22,163,74,0.2)' : 'var(--neutral-200)'}`,
-                      }}>
-                        {kpi} ({count}/3)
-                      </span>
-                    ));
-                  })()}
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>📊 KPIs que priorizas</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {kpis.map(k => (
+                    <span key={k} style={{
+                      padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                      background: 'rgba(22,163,74,0.1)', color: 'var(--ok)',
+                      border: '1px solid rgba(22,163,74,0.2)',
+                    }}>{k}</span>
+                  ))}
                 </div>
               </div>
 
-              {/* Risk matrix */}
               <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>⚠️ Matriz de riesgos</div>
-                {(() => {
-                  const counts: Record<string, number> = {};
-                  getAllR1().forEach(r => r.r3.riesgos.forEach(ri => { counts[ri] = (counts[ri] || 0) + 1; }));
-                  return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([risk, count]) => (
-                    <div key={risk} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
-                      <div style={{
-                        width: 8, height: 8, borderRadius: '50%',
-                        background: count === 3 ? 'var(--alert)' : count === 2 ? '#F59E0B' : 'var(--neutral-300)',
-                      }} />
-                      <span style={{ fontSize: 13, color: 'var(--neutral-700)', flex: 1 }}>{risk}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
-                        background: count === 3 ? 'rgba(220,38,38,0.1)' : count === 2 ? 'rgba(245,158,11,0.1)' : 'var(--neutral-100)',
-                        color: count === 3 ? 'var(--alert)' : count === 2 ? '#F59E0B' : 'var(--neutral-500)',
-                      }}>
-                        {count === 3 ? 'ALTO' : count === 2 ? 'MEDIO' : 'BAJO'}
-                      </span>
-                    </div>
-                  ));
-                })()}
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>⚠️ Riesgos que te preocupan</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {riesgos.map(r => (
+                    <div key={r} style={{ fontSize: 12, color: 'var(--neutral-700)' }}>• {r}</div>
+                  ))}
+                </div>
               </div>
 
-              {/* AI Strategic Report */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(176,125,43,0.05), rgba(139,92,246,0.05))',
-                border: '1px solid rgba(176,125,43,0.15)', borderRadius: 12, padding: 20, marginBottom: 20,
-              }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
-                  <span style={{ fontSize: 24 }}>🌱</span>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--neutral-900)' }}>Informe Estratégico de Seedy IA</div>
-                    <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>Generado a partir de las respuestas de los 3 socios</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--neutral-700)' }}>
-                  <p style={{ margin: '0 0 12px' }}>
-                    <strong>Diagnóstico:</strong> Equipo con fuerte complementariedad. David aporta la base productiva
-                    (terreno + conocimiento + dedicación máxima), Jesús conecta con el mercado final (cocina + restauración),
-                    y Fran digitaliza y optimiza. Existe consenso claro en el producto estrella: <strong>capones gourmet para Navidad</strong>.
-                  </p>
-                  <p style={{ margin: '0 0 12px' }}>
-                    <strong>Fortalezas:</strong> Diferenciación por calidad (producto artesanal y ecológico),
-                    mercado con demanda insatisfecha en segmento premium navideño, y plataforma tecnológica OvoSfera Hub
-                    como ventaja competitiva para trazabilidad y gestión.
-                  </p>
-                  <p style={{ margin: '0 0 12px' }}>
-                    <strong>Riesgos críticos:</strong> La sanidad aviar es el riesgo #1 que coincidís todos.
-                    Recomiendo: programa de bioseguridad desde el día 1, veterinario de referencia, y protocolo
-                    de cuarentena para nuevas incorporaciones al plantel.
-                  </p>
-                  <p style={{ margin: '0 0 12px' }}>
-                    <strong>Roadmap recomendado (12 meses):</strong>
-                  </p>
-                  <ol style={{ paddingLeft: 20, margin: '0 0 12px' }}>
-                    <li><strong>Mes 1-2:</strong> Infraestructura básica + adquisición de reproductores seleccionados (Castellana Negra × Plymouth Rock)</li>
-                    <li><strong>Mes 2-3:</strong> Primera incubación, registro ecológico iniciado</li>
-                    <li><strong>Mes 3-6:</strong> Cría y selección, marca "Los Capones" registrada, preventa a restaurantes</li>
-                    <li><strong>Mes 6-9:</strong> Caponización, engorde con plan nutricional optimizado</li>
-                    <li><strong>Mes 9-11:</strong> Acabado/finición con receta premium (castañas + leche)</li>
-                    <li><strong>Mes 11-12:</strong> Venta navideña, primer cierre económico, lecciones aprendidas</li>
-                  </ol>
-                  <p style={{ margin: '0 0 12px' }}>
-                    <strong>Inversión estimada:</strong> ~4.000-6.000€ entre los 3 socios (infraestructura 2.500€ + animales 1.000€ + pienso 800€ + certificación 500€ + imprevistos 500€).
-                    Breakeven estimado en el primer ciclo navideño si se venden 30+ capones a precio premium (25-35€/kg).
-                  </p>
-                  <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--primary-600)' }}>
-                    "Tenéis todos los ingredientes: tierra, conocimiento, cocina, tecnología y sobre todo, la pasión.
-                    OvoSfera Hub os ayudará a convertir esas respuestas en resultados medibles. ¡Adelante!" — Seedy 🌱
-                  </p>
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>🛠️ Herramientas prioritarias</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {herramientas.map(h => (
+                    <span key={h} style={{
+                      padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                      background: 'rgba(139,92,246,0.1)', color: 'var(--primary-600)',
+                      border: '1px solid rgba(139,92,246,0.2)',
+                    }}>{h}</span>
+                  ))}
                 </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button onClick={() => setStep('final')} style={btnP}>
-                  Ver acuerdo final <FileText size={16} />
+                <button onClick={() => saveProgress('final')} style={btnP}>
+                  Ver resumen final <FileText size={16} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── FINAL AGREEMENT ── */}
+          {/* ── FINAL — Resumen completo + esperando socios ── */}
           {step === 'final' && (
             <div style={{ ...card, maxWidth: 850 }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ fontSize: 48, marginBottom: 8 }}>🤝</div>
-                <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Acuerdo de Socios</h2>
-                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Granja Los Capones — OvoSfera</p>
+                <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
+                <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>¡Has completado las 3 rondas!</h2>
+                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Resumen de todas tus respuestas</p>
               </div>
+
+              {/* Resumen compacto de las 3 rondas */}
               <div style={{
-                background: 'var(--neutral-50)', borderRadius: 12, padding: 20, marginBottom: 20,
+                background: 'var(--neutral-50)', borderRadius: 12, padding: 20, marginBottom: 16,
                 border: '1px solid var(--neutral-200)', fontSize: 13, lineHeight: 1.8, color: 'var(--neutral-700)',
               }}>
-                <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, color: 'var(--neutral-900)' }}>1. Socios y roles</h3>
-                {[
-                  { n: 'David', rol: 'Director de producción', tiempo: SIMULATED.david.r1.tiempo, inv: SIMULATED.david.r2.inversion },
-                  { n: 'Jesús', rol: 'Director comercial', tiempo: SIMULATED.jesus.r1.tiempo, inv: SIMULATED.jesus.r2.inversion },
-                  { n: 'Fran', rol: 'Director de tecnología', tiempo: SIMULATED.fran.r1.tiempo, inv: SIMULATED.fran.r2.inversion },
-                ].map(s => (
-                  <div key={s.n} style={{ padding: '6px 0' }}>
-                    <strong>{s.n}</strong> — {s.rol} · {s.tiempo}/sem · Inversión: {s.inv}
-                  </div>
-                ))}
+                <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12, color: 'var(--neutral-900)' }}>Ronda 1 — Visión y compromiso</h3>
+                <div style={{ padding: '4px 0' }}><strong>Tiempo semanal:</strong> {tiempo}</div>
+                {horarios && <div style={{ padding: '4px 0' }}><strong>Horarios:</strong> {horarios}</div>}
+                <div style={{ padding: '4px 0' }}><strong>Ideas:</strong> {ideas.join(', ')}</div>
+                {ideaOtra && <div style={{ padding: '4px 0' }}><strong>Otra idea:</strong> {ideaOtra}</div>}
+                <div style={{ padding: '4px 0' }}><strong>Aportaciones:</strong> {aportaciones.join(', ')}</div>
+                {aportacionOtra && <div style={{ padding: '4px 0' }}><strong>Otra aportación:</strong> {aportacionOtra}</div>}
 
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '16px 0 12px', color: 'var(--neutral-900)' }}>2. Modelo de negocio</h3>
-                <p>Consenso: <strong>Capones gourmet para Navidad</strong> (3/3 de acuerdo) +
-                  <strong> Huevos ecológicos venta directa</strong> (2/3).</p>
+                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '16px 0 12px', color: 'var(--neutral-900)' }}>Ronda 2 — Organización</h3>
+                <div style={{ padding: '4px 0' }}><strong>Inversión:</strong> {inversion}</div>
+                <div style={{ padding: '4px 0' }}><strong>Decisiones:</strong> {decision}</div>
+                <div style={{ padding: '4px 0' }}><strong>Reparto:</strong> {reparto}</div>
 
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '16px 0 12px', color: 'var(--neutral-900)' }}>3. Toma de decisiones</h3>
-                <p>Mayoría simple (2 de 3). En caso de empate, decide el responsable del área afectada según su rol.</p>
-
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '16px 0 12px', color: 'var(--neutral-900)' }}>4. Reparto de beneficios</h3>
-                <p>Se aplicará el modelo de <strong>partes iguales (33/33/33)</strong>, revisable cada 6 meses
-                  según la dedicación real de cada socio.</p>
-
-                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '16px 0 12px', color: 'var(--neutral-900)' }}>5. Próximos pasos</h3>
-                <ol style={{ paddingLeft: 20 }}>
-                  <li>Configurar la granja en OvoSfera Hub (gallineros, aves)</li>
-                  <li>Adquirir primeros reproductores (Castellana Negra + Plymouth Rock)</li>
-                  <li>Planificar primer lote de incubación (febrero-marzo)</li>
-                  <li>Registrar marca "Los Capones" / solicitar certificación ecológica</li>
-                  <li>Contactar restaurantes locales para preventa de capones Navidad</li>
-                </ol>
+                <h3 style={{ fontSize: 16, fontWeight: 800, margin: '16px 0 12px', color: 'var(--neutral-900)' }}>Ronda 3 — Inteligencia de negocio</h3>
+                <div style={{ padding: '4px 0' }}><strong>Objetivos 1 año:</strong> {objetivo1y.join(', ')}</div>
+                <div style={{ padding: '4px 0' }}><strong>KPIs:</strong> {kpis.join(', ')}</div>
+                <div style={{ padding: '4px 0' }}><strong>Riesgos:</strong> {riesgos.join(', ')}</div>
+                <div style={{ padding: '4px 0' }}><strong>Herramientas:</strong> {herramientas.join(', ')}</div>
               </div>
+
+              {/* Estado de los socios */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(139,92,246,0.06))',
+                border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: 20, marginBottom: 20,
+              }}>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--neutral-900)' }}>Esperando a los demás socios</div>
+                  <p style={{ fontSize: 13, color: 'var(--neutral-500)', margin: '8px 0 0' }}>
+                    Cuando Jesús y Fran completen sus 3 rondas, Seedy IA generará el informe comparativo
+                    y la propuesta de acuerdo de socios.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                  {SOCIOS.map(s => (
+                    <div key={s.id} style={{
+                      padding: '12px 16px', borderRadius: 12, textAlign: 'center',
+                      background: s.id === currentUserId ? 'rgba(34,197,94,0.1)' : 'var(--neutral-50)',
+                      border: `1px solid ${s.id === currentUserId ? 'var(--ok)' : 'var(--neutral-200)'}`,
+                      minWidth: 100,
+                    }}>
+                      <div style={{ fontSize: 28 }}>{s.avatar}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, marginTop: 4, color: 'var(--neutral-800)' }}>{s.nombre}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: s.id === currentUserId ? 'var(--ok)' : '#F59E0B' }}>
+                        {s.id === currentUserId ? '✅ Completado' : '⏳ No ha respondido'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <Link href="/dashboard" style={{ ...btnP, textDecoration: 'none' }}>
                   Ir al Dashboard <ChevronRight size={16} />
@@ -979,12 +789,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <style jsx>{`
-            @keyframes progressSlide {
-              0% { transform: translateX(-100%); }
-              100% { transform: translateX(300%); }
-            }
-          `}</style>
         </div>
       )}
     </div>
