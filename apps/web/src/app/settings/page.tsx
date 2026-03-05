@@ -11,12 +11,13 @@ import Link from 'next/link';
 /* ══════════════════════════════════════════════════════
    WIZARD TYPES & DATA
    ══════════════════════════════════════════════════════ */
-type Step = 'intro' | 'r1q1' | 'r1q2' | 'r1q3' | 'r1_wait' | 'r1_results' | 'r2q4' | 'r2q5' | 'r2q6' | 'r2_wait' | 'r2_results' | 'final';
+type Step = 'intro' | 'r1q1' | 'r1q2' | 'r1q3' | 'r1_wait' | 'r1_results' | 'r2q4' | 'r2q5' | 'r2q6' | 'r2_wait' | 'r2_results' | 'r3q7' | 'r3q8' | 'r3q9' | 'r3q10' | 'r3_wait' | 'r3_results' | 'final';
 
 interface Respuesta {
   userId: string; nombre: string;
   r1: { tiempo: string; horarios: string; ideas: string[]; ideaOtra: string; aportaciones: string[]; aportacionOtra: string };
   r2: { inversion: string; decision: string; reparto: string };
+  r3: { objetivo1y: string[]; kpis: string[]; riesgos: string[]; herramientas: string[] };
 }
 
 const SOCIOS = [
@@ -48,6 +49,36 @@ const INVERSIONES = ['0€', '< 500€', '500-1.000€', '1.000-3.000€', '> 3.
 const DECISIONES = ['Mayoría simple', 'El que más sabe del tema', 'Rotativo mensual', 'Siempre David (dueño del terreno)'];
 const REPARTOS = ['Partes iguales (33/33/33)', 'Proporcional a dedicación', 'Proporcional a inversión'];
 
+/* ── R3 Data (Business Intelligence) ── */
+const OBJETIVOS_1Y = [
+  'Primer lote de capones vendido en Navidad',
+  'Producción estable de huevos ecológicos',
+  'Registro ecológico y certificación',
+  'Marca comercial registrada',
+  'Red de 5+ restaurantes compradores',
+  'Breakeven (cubrir costes operativos)',
+  'Infraestructura básica completada',
+  'Web/tienda online operativa',
+];
+const KPIS_OPTIONS = [
+  'Rentabilidad por ave (€/ave)', 'Tasa de mortalidad (%)',
+  'Coste de pienso por kg producido', 'Índice de conversión alimenticia',
+  'Satisfacción del cliente (NPS)', 'Ingresos mensuales',
+  'Huella de carbono neta', 'Diversidad genética del plantel',
+];
+const RIESGOS_OPTIONS = [
+  'Enfermedades / epidemia aviar', 'Falta de tiempo de los socios',
+  'No encontrar mercado / clientes', 'Burocracia y permisos',
+  'Conflictos entre socios', 'Costes superiores a lo previsto',
+  'Depredadores (zorros, etc.)', 'Climatología adversa',
+];
+const HERRAMIENTAS_OPTIONS = [
+  'Dashboard de producción en tiempo real', 'Alertas automáticas (salud, stock)',
+  'Registro digital de trazabilidad', 'Análisis genético / recomendador IA',
+  'Gestión financiera / ERP', 'Calendario y planificación compartida',
+  'Módulo de ventas y facturación', 'Simulador de escenarios',
+];
+
 const SIMULATED: Record<string, Respuesta> = {
   david: {
     userId: 'david', nombre: 'David',
@@ -55,6 +86,7 @@ const SIMULATED: Record<string, Respuesta> = {
       ideas: ['Capones gourmet para Navidad (producción estacional, alto margen)', 'Huevos ecológicos venta directa (producción continua, margen medio)'],
       ideaOtra: '', aportaciones: ['Terreno y espacio', 'Conocimiento ganadero / agrícola', 'Mano de obra diaria'], aportacionOtra: '' },
     r2: { inversion: '1.000-3.000€', decision: 'Mayoría simple', reparto: 'Proporcional a dedicación' },
+    r3: { objetivo1y: ['Primer lote de capones vendido en Navidad', 'Infraestructura básica completada'], kpis: ['Rentabilidad por ave (€/ave)', 'Tasa de mortalidad (%)'], riesgos: ['Enfermedades / epidemia aviar', 'Depredadores (zorros, etc.)'], herramientas: ['Dashboard de producción en tiempo real', 'Alertas automáticas (salud, stock)'] },
   },
   jesus: {
     userId: 'jesus', nombre: 'Jesús',
@@ -62,6 +94,7 @@ const SIMULATED: Record<string, Respuesta> = {
       ideas: ['Capones gourmet para Navidad (producción estacional, alto margen)', 'Huevos ecológicos venta directa (producción continua, margen medio)', 'Agroturismo: visitas a la granja + venta in situ'],
       ideaOtra: '', aportaciones: ['Cocina y transformación (elaborados)', 'Contactos comerciales (restaurantes, tiendas, mercados)', 'Capital para inversión inicial'], aportacionOtra: '' },
     r2: { inversion: '500-1.000€', decision: 'El que más sabe del tema', reparto: 'Partes iguales (33/33/33)' },
+    r3: { objetivo1y: ['Primer lote de capones vendido en Navidad', 'Red de 5+ restaurantes compradores'], kpis: ['Satisfacción del cliente (NPS)', 'Ingresos mensuales'], riesgos: ['No encontrar mercado / clientes', 'Costes superiores a lo previsto'], herramientas: ['Módulo de ventas y facturación', 'Registro digital de trazabilidad'] },
   },
   fran: {
     userId: 'fran', nombre: 'Fran',
@@ -69,6 +102,7 @@ const SIMULATED: Record<string, Respuesta> = {
       ideas: ['Capones gourmet para Navidad (producción estacional, alto margen)', 'Conservación de razas autóctonas + genética (nicho, prestigio)'],
       ideaOtra: '', aportaciones: ['Tecnología y digitalización', 'Marketing y ventas'], aportacionOtra: '' },
     r2: { inversion: '500-1.000€', decision: 'Mayoría simple', reparto: 'Partes iguales (33/33/33)' },
+    r3: { objetivo1y: ['Web/tienda online operativa', 'Marca comercial registrada'], kpis: ['Huella de carbono neta', 'Diversidad genética del plantel'], riesgos: ['Falta de tiempo de los socios', 'Burocracia y permisos'], herramientas: ['Análisis genético / recomendador IA', 'Simulador de escenarios'] },
   },
 };
 
@@ -90,6 +124,12 @@ export default function SettingsPage() {
   const [inversion, setInversion] = useState('');
   const [decision, setDecision] = useState('');
   const [reparto, setReparto] = useState('');
+  const [objetivo1y, setObjetivo1y] = useState<string[]>([]);
+  const [kpis, setKpis] = useState<string[]>([]);
+  const [riesgos, setRiesgos] = useState<string[]>([]);
+  const [herramientas, setHerramientas] = useState<string[]>([]);
+  const [claudeReport, setClaudeReport] = useState('');
+  const [claudeLoading, setClaudeLoading] = useState(false);
   const [waiting, setWaiting] = useState(false);
 
   const currentUserId = user?.name?.toLowerCase() || 'david';
@@ -106,6 +146,7 @@ export default function SettingsPage() {
       userId: currentUserId, nombre: user?.name || 'Tú',
       r1: { tiempo, horarios, ideas, ideaOtra, aportaciones, aportacionOtra },
       r2: { inversion, decision, reparto },
+      r3: { objetivo1y, kpis, riesgos, herramientas },
     };
     return SOCIOS.map(s => s.id === currentUserId ? mine : SIMULATED[s.id]);
   }
@@ -214,12 +255,12 @@ export default function SettingsPage() {
           <div style={{ maxWidth: 700, margin: '0 auto 24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--neutral-500)', marginBottom: 6 }}>
               <span>Wizard de Socios</span>
-              <span>{Math.min((['intro','r1q1','r1q2','r1q3','r1_wait','r1_results','r2q4','r2q5','r2q6','r2_wait','r2_results','final'].indexOf(step) + 1), 12)}/12</span>
+              <span>{Math.min((['intro','r1q1','r1q2','r1q3','r1_wait','r1_results','r2q4','r2q5','r2q6','r2_wait','r2_results','r3q7','r3q8','r3q9','r3q10','r3_wait','r3_results','final'].indexOf(step) + 1), 17)}/17</span>
             </div>
             <div style={{ height: 4, background: 'var(--neutral-200)', borderRadius: 2 }}>
               <div style={{
                 height: '100%', borderRadius: 2, background: 'var(--primary-500)',
-                width: `${((['intro','r1q1','r1q2','r1q3','r1_wait','r1_results','r2q4','r2q5','r2q6','r2_wait','r2_results','final'].indexOf(step) + 1) / 12) * 100}%`,
+                width: `${((['intro','r1q1','r1q2','r1q3','r1_wait','r1_results','r2q4','r2q5','r2q6','r2_wait','r2_results','r3q7','r3q8','r3q9','r3q10','r3_wait','r3_results','final'].indexOf(step) + 1) / 17) * 100}%`,
                 transition: 'width .3s',
               }} />
             </div>
@@ -622,6 +663,263 @@ export default function SettingsPage() {
                   </div>
                 ))}
               </div>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button onClick={() => setStep('r3q7')} style={btnP}>
+                  Continuar a Ronda 3 <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── R3 Q7: Objetivos 1 año ── */}
+          {step === 'r3q7' && (
+            <div style={card}>
+              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 700, marginBottom: 8 }}>RONDA 3 — Pregunta 7/10</div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>
+                🎯 Objetivos a 1 año
+              </h2>
+              <p style={{ color: 'var(--neutral-500)', fontSize: 13, marginBottom: 16 }}>¿Qué quieres haber conseguido en 12 meses? Selecciona los más importantes.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                {OBJETIVOS_1Y.map(o => (
+                  <button key={o} onClick={() => setObjetivo1y(objetivo1y.includes(o) ? objetivo1y.filter(x => x !== o) : [...objetivo1y, o])} style={optBtn(objetivo1y.includes(o))}>
+                    {objetivo1y.includes(o) ? '☑' : '☐'} {o}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => setStep('r2_results')} style={btnBack}><ChevronLeft size={16} /> Atrás</button>
+                <button onClick={() => setStep('r3q8')} disabled={objetivo1y.length === 0} style={{ ...btnP, opacity: objetivo1y.length > 0 ? 1 : 0.5 }}>Siguiente <ChevronRight size={16} /></button>
+              </div>
+            </div>
+          )}
+
+          {/* ── R3 Q8: KPIs ── */}
+          {step === 'r3q8' && (
+            <div style={card}>
+              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 700, marginBottom: 8 }}>RONDA 3 — Pregunta 8/10</div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>
+                📊 KPIs clave para tu negocio
+              </h2>
+              <p style={{ color: 'var(--neutral-500)', fontSize: 13, marginBottom: 16 }}>¿Qué métricas deben estar en el dashboard?</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
+                {KPIS_OPTIONS.map(k => (
+                  <button key={k} onClick={() => setKpis(kpis.includes(k) ? kpis.filter(x => x !== k) : [...kpis, k])} style={optBtn(kpis.includes(k))}>
+                    {kpis.includes(k) ? '☑' : '☐'} {k}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => setStep('r3q7')} style={btnBack}><ChevronLeft size={16} /> Atrás</button>
+                <button onClick={() => setStep('r3q9')} disabled={kpis.length === 0} style={{ ...btnP, opacity: kpis.length > 0 ? 1 : 0.5 }}>Siguiente <ChevronRight size={16} /></button>
+              </div>
+            </div>
+          )}
+
+          {/* ── R3 Q9: Riesgos ── */}
+          {step === 'r3q9' && (
+            <div style={card}>
+              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 700, marginBottom: 8 }}>RONDA 3 — Pregunta 9/10</div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>
+                ⚠️ Riesgos que te preocupan
+              </h2>
+              <p style={{ color: 'var(--neutral-500)', fontSize: 13, marginBottom: 16 }}>Identificarlos ahora permite preparar mitigaciones.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
+                {RIESGOS_OPTIONS.map(r => (
+                  <button key={r} onClick={() => setRiesgos(riesgos.includes(r) ? riesgos.filter(x => x !== r) : [...riesgos, r])} style={optBtn(riesgos.includes(r))}>
+                    {riesgos.includes(r) ? '☑' : '☐'} {r}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => setStep('r3q8')} style={btnBack}><ChevronLeft size={16} /> Atrás</button>
+                <button onClick={() => setStep('r3q10')} disabled={riesgos.length === 0} style={{ ...btnP, opacity: riesgos.length > 0 ? 1 : 0.5 }}>Siguiente <ChevronRight size={16} /></button>
+              </div>
+            </div>
+          )}
+
+          {/* ── R3 Q10: Herramientas ── */}
+          {step === 'r3q10' && (
+            <div style={card}>
+              <div style={{ fontSize: 11, color: '#10B981', fontWeight: 700, marginBottom: 8 }}>RONDA 3 — Pregunta 10/10</div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>
+                🛠️ Herramientas digitales prioritarias
+              </h2>
+              <p style={{ color: 'var(--neutral-500)', fontSize: 13, marginBottom: 16 }}>¿Qué funciones de OvoSfera Hub serían más valiosas?</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
+                {HERRAMIENTAS_OPTIONS.map(h => (
+                  <button key={h} onClick={() => setHerramientas(herramientas.includes(h) ? herramientas.filter(x => x !== h) : [...herramientas, h])} style={optBtn(herramientas.includes(h))}>
+                    {herramientas.includes(h) ? '☑' : '☐'} {h}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => setStep('r3q9')} style={btnBack}><ChevronLeft size={16} /> Atrás</button>
+                <button onClick={() => simulateWait('r3_wait', 'r3_results')} disabled={herramientas.length === 0} style={{ ...btnP, opacity: herramientas.length > 0 ? 1 : 0.5 }}>
+                  Enviar y generar informe IA <Check size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── R3 WAIT ── */}
+          {step === 'r3_wait' && (
+            <div style={card}>
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <Lock size={48} style={{ color: '#10B981', marginBottom: 16 }} />
+                <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--neutral-900)' }}>Ronda 3 enviada</h2>
+                <p style={{ color: 'var(--neutral-500)', fontSize: 14, lineHeight: 1.6, maxWidth: 400, margin: '0 auto 20px' }}>
+                  Esperando a que los 3 socios completen la ronda de inteligencia de negocio…
+                </p>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 20 }}>
+                  {SOCIOS.map(s => (
+                    <div key={s.id} style={{
+                      padding: '10px 14px', borderRadius: 10, textAlign: 'center',
+                      background: s.id === currentUserId ? 'rgba(34,197,94,0.1)' : 'var(--neutral-50)',
+                      border: `1px solid ${s.id === currentUserId ? 'var(--ok)' : 'var(--neutral-200)'}`,
+                      minWidth: 80,
+                    }}>
+                      <div style={{ fontSize: 24 }}>{s.avatar}</div>
+                      <div style={{ fontWeight: 600, fontSize: 12, marginTop: 2, color: 'var(--neutral-800)' }}>{s.nombre}</div>
+                      <div style={{ fontSize: 11, color: s.id === currentUserId ? 'var(--ok)' : '#F59E0B', fontWeight: 600 }}>
+                        {s.id === currentUserId ? '✅ Enviado' : '⏳ Pendiente'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {waiting && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 14, color: 'var(--neutral-500)' }}>🤖 Seedy IA está generando el informe…</div>
+                    <div style={{ width: 120, height: 4, background: 'var(--neutral-200)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', background: '#10B981', borderRadius: 2, width: '60%', animation: 'progressSlide 1.5s ease-in-out infinite' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── R3 RESULTS (Claude Report) ── */}
+          {step === 'r3_results' && (
+            <div style={{ ...card, maxWidth: 900 }}>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>🤖</div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--neutral-900)' }}>Informe Seedy IA — Ronda 3</h2>
+                <p style={{ color: 'var(--neutral-500)', fontSize: 13 }}>Análisis de inteligencia de negocio basado en las respuestas de los 3 socios</p>
+              </div>
+
+              {/* Objetivos consensus */}
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>🎯 Objetivos a 1 año (consenso)</div>
+                {(() => {
+                  const counts: Record<string, number> = {};
+                  getAllR1().forEach(r => r.r3.objetivo1y.forEach(o => { counts[o] = (counts[o] || 0) + 1; }));
+                  return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([obj, count]) => (
+                    <div key={obj} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', fontSize: 12 }}>
+                      <span style={{ color: count === 3 ? 'var(--ok)' : count === 2 ? '#F59E0B' : 'var(--neutral-400)', fontWeight: 700, minWidth: 20 }}>
+                        {count === 3 ? '✅' : count === 2 ? '⚠️' : '○'} {count}/3
+                      </span>
+                      <span style={{ color: 'var(--neutral-700)' }}>{obj}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* KPIs priority */}
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>📊 KPIs prioritarios</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {(() => {
+                    const counts: Record<string, number> = {};
+                    getAllR1().forEach(r => r.r3.kpis.forEach(k => { counts[k] = (counts[k] || 0) + 1; }));
+                    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([kpi, count]) => (
+                      <span key={kpi} style={{
+                        padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        background: count >= 2 ? 'rgba(22,163,74,0.1)' : 'var(--neutral-100)',
+                        color: count >= 2 ? 'var(--ok)' : 'var(--neutral-600)',
+                        border: `1px solid ${count >= 2 ? 'rgba(22,163,74,0.2)' : 'var(--neutral-200)'}`,
+                      }}>
+                        {kpi} ({count}/3)
+                      </span>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* Risk matrix */}
+              <div style={{ background: 'var(--neutral-50)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: 'var(--neutral-800)' }}>⚠️ Matriz de riesgos</div>
+                {(() => {
+                  const counts: Record<string, number> = {};
+                  getAllR1().forEach(r => r.r3.riesgos.forEach(ri => { counts[ri] = (counts[ri] || 0) + 1; }));
+                  return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([risk, count]) => (
+                    <div key={risk} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                      <div style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: count === 3 ? 'var(--alert)' : count === 2 ? '#F59E0B' : 'var(--neutral-300)',
+                      }} />
+                      <span style={{ fontSize: 13, color: 'var(--neutral-700)', flex: 1 }}>{risk}</span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                        background: count === 3 ? 'rgba(220,38,38,0.1)' : count === 2 ? 'rgba(245,158,11,0.1)' : 'var(--neutral-100)',
+                        color: count === 3 ? 'var(--alert)' : count === 2 ? '#F59E0B' : 'var(--neutral-500)',
+                      }}>
+                        {count === 3 ? 'ALTO' : count === 2 ? 'MEDIO' : 'BAJO'}
+                      </span>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* AI Strategic Report */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(176,125,43,0.05), rgba(139,92,246,0.05))',
+                border: '1px solid rgba(176,125,43,0.15)', borderRadius: 12, padding: 20, marginBottom: 20,
+              }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
+                  <span style={{ fontSize: 24 }}>🌱</span>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--neutral-900)' }}>Informe Estratégico de Seedy IA</div>
+                    <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>Generado a partir de las respuestas de los 3 socios</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--neutral-700)' }}>
+                  <p style={{ margin: '0 0 12px' }}>
+                    <strong>Diagnóstico:</strong> Equipo con fuerte complementariedad. David aporta la base productiva
+                    (terreno + conocimiento + dedicación máxima), Jesús conecta con el mercado final (cocina + restauración),
+                    y Fran digitaliza y optimiza. Existe consenso claro en el producto estrella: <strong>capones gourmet para Navidad</strong>.
+                  </p>
+                  <p style={{ margin: '0 0 12px' }}>
+                    <strong>Fortalezas:</strong> Diferenciación por calidad (producto artesanal y ecológico),
+                    mercado con demanda insatisfecha en segmento premium navideño, y plataforma tecnológica OvoSfera Hub
+                    como ventaja competitiva para trazabilidad y gestión.
+                  </p>
+                  <p style={{ margin: '0 0 12px' }}>
+                    <strong>Riesgos críticos:</strong> La sanidad aviar es el riesgo #1 que coincidís todos.
+                    Recomiendo: programa de bioseguridad desde el día 1, veterinario de referencia, y protocolo
+                    de cuarentena para nuevas incorporaciones al plantel.
+                  </p>
+                  <p style={{ margin: '0 0 12px' }}>
+                    <strong>Roadmap recomendado (12 meses):</strong>
+                  </p>
+                  <ol style={{ paddingLeft: 20, margin: '0 0 12px' }}>
+                    <li><strong>Mes 1-2:</strong> Infraestructura básica + adquisición de reproductores seleccionados (Castellana Negra × Plymouth Rock)</li>
+                    <li><strong>Mes 2-3:</strong> Primera incubación, registro ecológico iniciado</li>
+                    <li><strong>Mes 3-6:</strong> Cría y selección, marca "Los Capones" registrada, preventa a restaurantes</li>
+                    <li><strong>Mes 6-9:</strong> Caponización, engorde con plan nutricional optimizado</li>
+                    <li><strong>Mes 9-11:</strong> Acabado/finición con receta premium (castañas + leche)</li>
+                    <li><strong>Mes 11-12:</strong> Venta navideña, primer cierre económico, lecciones aprendidas</li>
+                  </ol>
+                  <p style={{ margin: '0 0 12px' }}>
+                    <strong>Inversión estimada:</strong> ~4.000-6.000€ entre los 3 socios (infraestructura 2.500€ + animales 1.000€ + pienso 800€ + certificación 500€ + imprevistos 500€).
+                    Breakeven estimado en el primer ciclo navideño si se venden 30+ capones a precio premium (25-35€/kg).
+                  </p>
+                  <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--primary-600)' }}>
+                    "Tenéis todos los ingredientes: tierra, conocimiento, cocina, tecnología y sobre todo, la pasión.
+                    OvoSfera Hub os ayudará a convertir esas respuestas en resultados medibles. ¡Adelante!" — Seedy 🌱
+                  </p>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <button onClick={() => setStep('final')} style={btnP}>
                   Ver acuerdo final <FileText size={16} />

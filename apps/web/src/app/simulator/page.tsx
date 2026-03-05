@@ -100,6 +100,10 @@ export default function SimulatorPage() {
   const [hybrids, setHybrids] = useState<any[]>([]);
   const [hybridTab, setHybridTab] = useState<'F1' | 'F2' | 'F3'>('F1');
 
+  // Gallery search & filter
+  const [gallerySearch, setGallerySearch] = useState('');
+  const [galleryFilter, setGalleryFilter] = useState<'all' | 'pesada' | 'ligera' | 'española' | 'francesa'>('all');
+
   /* ── Fetch breeds ── */
   useEffect(() => {
     (async () => {
@@ -111,19 +115,50 @@ export default function SimulatorPage() {
         setLoading(false);
       } catch (e: any) {
         console.error('Breeds fetch error:', e);
-        // Fallback demo breeds
+        // Fallback demo breeds — 42 razas para capones gourmet
         setBreeds([
-          { name: 'Castellana Negra', weight_m: 3.2, weight_f: 2.5, eggs_per_year: 180, carcass_pct: 72, growth: 'medio', comb: 'sencilla' },
-          { name: 'Plymouth Rock', weight_m: 3.8, weight_f: 3.0, eggs_per_year: 200, carcass_pct: 75, growth: 'rápido', comb: 'sencilla' },
-          { name: 'Bresse', weight_m: 3.5, weight_f: 2.8, eggs_per_year: 250, carcass_pct: 78, growth: 'rápido', comb: 'sencilla' },
-          { name: 'Sulmtaler', weight_m: 3.5, weight_f: 2.8, eggs_per_year: 170, carcass_pct: 74, growth: 'medio', comb: 'sencilla' },
-          { name: 'Orpington', weight_m: 4.5, weight_f: 3.5, eggs_per_year: 190, carcass_pct: 76, growth: 'medio', comb: 'sencilla' },
-          { name: 'Cochin', weight_m: 5.0, weight_f: 3.8, eggs_per_year: 120, carcass_pct: 70, growth: 'lento', comb: 'sencilla' },
-          { name: 'Sussex', weight_m: 4.0, weight_f: 3.2, eggs_per_year: 260, carcass_pct: 75, growth: 'rápido', comb: 'sencilla' },
-          { name: 'Vorwerk', weight_m: 3.0, weight_f: 2.5, eggs_per_year: 170, carcass_pct: 72, growth: 'medio', comb: 'sencilla' },
-          { name: 'Andaluza', weight_m: 3.2, weight_f: 2.5, eggs_per_year: 160, carcass_pct: 71, growth: 'medio', comb: 'sencilla' },
-          { name: 'Brahma', weight_m: 5.5, weight_f: 4.0, eggs_per_year: 140, carcass_pct: 73, growth: 'lento', comb: 'guisante' },
-          { name: 'Cornish', weight_m: 4.5, weight_f: 3.5, eggs_per_year: 80, carcass_pct: 80, growth: 'rápido', comb: 'guisante' },
+          { name: 'Bresse', weight_m: 4.5, weight_f: 3.5, eggs_per_year: 200, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Francia' },
+          { name: 'Sulmtaler', weight_m: 4.0, weight_f: 3.0, eggs_per_year: 180, carcass_pct: 68, growth: 'medio', comb: 'nuez', origin: 'Austria' },
+          { name: 'Orpington', weight_m: 4.5, weight_f: 3.5, eggs_per_year: 160, carcass_pct: 65, growth: 'lento', comb: 'simple', origin: 'Reino Unido' },
+          { name: 'Plymouth Rock Barrada', weight_m: 4.3, weight_f: 3.3, eggs_per_year: 200, carcass_pct: 72, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos' },
+          { name: 'Cochin', weight_m: 4.8, weight_f: 3.8, eggs_per_year: 140, carcass_pct: 68, growth: 'lento', comb: 'guisante', origin: 'China' },
+          { name: 'Sussex', weight_m: 4.2, weight_f: 3.2, eggs_per_year: 210, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Reino Unido' },
+          { name: 'Vorwerk', weight_m: 3.5, weight_f: 2.8, eggs_per_year: 170, carcass_pct: 66, growth: 'medio', comb: 'simple', origin: 'Alemania' },
+          { name: 'Andaluza', weight_m: 3.0, weight_f: 2.5, eggs_per_year: 180, carcass_pct: 64, growth: 'rápido', comb: 'simple', origin: 'España' },
+          { name: 'Castellana Negra', weight_m: 3.2, weight_f: 2.6, eggs_per_year: 190, carcass_pct: 67, growth: 'rápido', comb: 'simple', origin: 'España' },
+          { name: 'Brahma', weight_m: 5.0, weight_f: 4.0, eggs_per_year: 140, carcass_pct: 68, growth: 'lento', comb: 'guisante', origin: 'India' },
+          { name: 'Cornish', weight_m: 4.0, weight_f: 2.5, eggs_per_year: 80, carcass_pct: 75, growth: 'medio', comb: 'guisante', origin: 'Reino Unido' },
+          { name: 'Rhode Island Red', weight_m: 3.9, weight_f: 2.9, eggs_per_year: 220, carcass_pct: 70, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos' },
+          { name: 'New Hampshire', weight_m: 3.8, weight_f: 2.8, eggs_per_year: 200, carcass_pct: 72, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos' },
+          { name: 'Wyandotte', weight_m: 3.8, weight_f: 2.8, eggs_per_year: 180, carcass_pct: 70, growth: 'medio', comb: 'rosa', origin: 'Estados Unidos' },
+          { name: 'Australorp', weight_m: 3.9, weight_f: 3.1, eggs_per_year: 250, carcass_pct: 68, growth: 'rápido', comb: 'simple', origin: 'Australia' },
+          { name: 'Marans', weight_m: 3.5, weight_f: 2.6, eggs_per_year: 150, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Francia' },
+          { name: 'Faverolles', weight_m: 4.0, weight_f: 3.3, eggs_per_year: 160, carcass_pct: 68, growth: 'lento', comb: 'simple', origin: 'Francia' },
+          { name: 'Dorking', weight_m: 4.5, weight_f: 3.6, eggs_per_year: 140, carcass_pct: 70, growth: 'lento', comb: 'simple', origin: 'Reino Unido' },
+          { name: 'Jersey Giant', weight_m: 5.5, weight_f: 4.5, eggs_per_year: 180, carcass_pct: 72, growth: 'lento', comb: 'simple', origin: 'Estados Unidos' },
+          { name: 'Euskal Oiloa', weight_m: 4.0, weight_f: 2.9, eggs_per_year: 200, carcass_pct: 68, growth: 'medio', comb: 'simple', origin: 'País Vasco' },
+          { name: 'Pita Pinta Asturiana', weight_m: 4.3, weight_f: 2.8, eggs_per_year: 180, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Asturias' },
+          { name: 'Prat Leonada', weight_m: 3.5, weight_f: 2.5, eggs_per_year: 180, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Cataluña' },
+          { name: 'Penedesenca Negra', weight_m: 3.0, weight_f: 2.3, eggs_per_year: 160, carcass_pct: 65, growth: 'rápido', comb: 'simple', origin: 'Cataluña' },
+          { name: 'Mos', weight_m: 4.0, weight_f: 3.0, eggs_per_year: 190, carcass_pct: 72, growth: 'lento', comb: 'guisante', origin: 'Galicia' },
+          { name: 'Malines', weight_m: 5.0, weight_f: 3.8, eggs_per_year: 150, carcass_pct: 72, growth: 'lento', comb: 'simple', origin: 'Bélgica' },
+          { name: 'Ayam Cemani', weight_m: 2.0, weight_f: 1.4, eggs_per_year: 140, carcass_pct: 60, growth: 'medio', comb: 'simple', origin: 'Indonesia' },
+          { name: 'Delaware', weight_m: 3.8, weight_f: 2.8, eggs_per_year: 200, carcass_pct: 72, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos' },
+          { name: 'Naked Neck', weight_m: 3.5, weight_f: 2.5, eggs_per_year: 160, carcass_pct: 72, growth: 'medio', comb: 'simple', origin: 'Transilvania' },
+          { name: 'Leghorn', weight_m: 2.5, weight_f: 1.8, eggs_per_year: 280, carcass_pct: 62, growth: 'rápido', comb: 'simple', origin: 'Italia' },
+          { name: 'Minorca', weight_m: 3.5, weight_f: 2.5, eggs_per_year: 200, carcass_pct: 62, growth: 'medio', comb: 'simple', origin: 'España' },
+          { name: 'Welsummer', weight_m: 3.2, weight_f: 2.5, eggs_per_year: 170, carcass_pct: 68, growth: 'medio', comb: 'simple', origin: 'Países Bajos' },
+          { name: 'Barnevelder', weight_m: 3.5, weight_f: 2.8, eggs_per_year: 180, carcass_pct: 68, growth: 'medio', comb: 'simple', origin: 'Países Bajos' },
+          { name: 'Empordanesa', weight_m: 3.2, weight_f: 2.4, eggs_per_year: 160, carcass_pct: 66, growth: 'medio', comb: 'simple', origin: 'Cataluña' },
+          { name: 'Sobrarbe', weight_m: 3.5, weight_f: 2.8, eggs_per_year: 150, carcass_pct: 67, growth: 'lento', comb: 'simple', origin: 'Aragón' },
+          { name: 'La Flèche', weight_m: 4.0, weight_f: 3.0, eggs_per_year: 150, carcass_pct: 72, growth: 'medio', comb: 'en V', origin: 'Francia' },
+          { name: 'Houdan', weight_m: 3.5, weight_f: 2.5, eggs_per_year: 170, carcass_pct: 68, growth: 'medio', comb: 'en V', origin: 'Francia' },
+          { name: 'Crèvecœur', weight_m: 4.0, weight_f: 3.0, eggs_per_year: 140, carcass_pct: 70, growth: 'lento', comb: 'en V', origin: 'Francia' },
+          { name: 'Barbezieux', weight_m: 4.5, weight_f: 3.5, eggs_per_year: 180, carcass_pct: 72, growth: 'medio', comb: 'simple', origin: 'Francia' },
+          { name: 'Hamburg', weight_m: 2.5, weight_f: 2.0, eggs_per_year: 200, carcass_pct: 62, growth: 'rápido', comb: 'rosa', origin: 'Alemania' },
+          { name: 'Campine', weight_m: 2.5, weight_f: 2.0, eggs_per_year: 180, carcass_pct: 62, growth: 'rápido', comb: 'simple', origin: 'Bélgica' },
+          { name: 'Araucana', weight_m: 2.8, weight_f: 2.2, eggs_per_year: 170, carcass_pct: 66, growth: 'medio', comb: 'guisante', origin: 'Chile' },
+          { name: 'Bielefelder', weight_m: 4.2, weight_f: 3.2, eggs_per_year: 220, carcass_pct: 70, growth: 'rápido', comb: 'simple', origin: 'Alemania' },
         ]);
         setError('Usando catálogo demo — capones-backend no disponible');
         setLoading(false);
@@ -270,51 +305,152 @@ export default function SimulatorPage() {
       {/* ═══════════ GALLERY TAB ═══════════ */}
       {tab === 'gallery' && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
-            {breeds.map(breed => (
-              <div key={breed.name} onClick={() => setSelectedBreed(breed)} style={{
-                background: 'white', borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
-                border: '1px solid var(--neutral-100)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                transition: 'transform .15s, box-shadow .15s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
-              >
-                {/* Breed photo */}
-                <div style={{ height: 140, background: 'var(--neutral-50)', position: 'relative', overflow: 'hidden' }}>
-                  <img
-                    src={`${CAPONES_API}/images/males/${breed.name.toLowerCase().replace(/ /g, '_')}.jpg`}
-                    alt={breed.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={e => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex');
-                    }}
-                  />
-                  <div style={{ display: 'none', position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', background: 'var(--neutral-50)' }}>
-                    <span style={{ fontSize: 40 }}>🐓</span>
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div style={{ padding: '10px 12px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>{breed.name}</div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 6, fontSize: 11, color: 'var(--neutral-500)' }}>
-                    <span>♂{breed.weight_m}kg</span>
-                    <span>♀{breed.weight_f}kg</span>
-                    <span>🥚{breed.eggs_per_year}/año</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--neutral-50)', color: 'var(--neutral-600)' }}>
-                      {breed.growth}
-                    </span>
-                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--neutral-50)', color: 'var(--neutral-600)' }}>
-                      {breed.carcass_pct}% canal
-                    </span>
-                  </div>
-                </div>
-              </div>
+          {/* Search & Filter bar */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: '1 1 200px' }}>
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--neutral-400)' }} />
+              <input
+                className="nf-input" placeholder="Buscar raza..."
+                value={gallerySearch} onChange={e => setGallerySearch(e.target.value)}
+                style={{ width: '100%', paddingLeft: 30 }}
+              />
+            </div>
+            {[
+              { k: 'all', l: 'Todas' },
+              { k: 'pesada', l: '🐔 Pesadas (>3.5kg)' },
+              { k: 'ligera', l: '🐤 Ligeras (<3kg)' },
+              { k: 'española', l: '🇪🇸 Españolas' },
+              { k: 'francesa', l: '🇫🇷 Francesas' },
+            ].map(f => (
+              <button key={f.k} onClick={() => setGalleryFilter(f.k as any)} style={{
+                padding: '6px 12px', borderRadius: 6, fontSize: 11, fontWeight: galleryFilter === f.k ? 700 : 500,
+                background: galleryFilter === f.k ? 'var(--primary-500)' : 'var(--neutral-50)',
+                color: galleryFilter === f.k ? 'white' : 'var(--neutral-600)',
+                border: galleryFilter === f.k ? '1px solid var(--primary-600)' : '1px solid var(--neutral-200)',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                {f.l}
+              </button>
             ))}
+            <span style={{ fontSize: 11, color: 'var(--neutral-400)', marginLeft: 'auto' }}>
+              {(() => {
+                const spanishOrigins = ['España','Cataluña','Galicia','Asturias','País Vasco','Aragón'];
+                const frenchOrigins = ['Francia'];
+                const filtered = breeds.filter(b => {
+                  const q = gallerySearch.toLowerCase();
+                  if (q && !b.name.toLowerCase().includes(q) && !(b.origin || '').toLowerCase().includes(q)) return false;
+                  if (galleryFilter === 'pesada' && b.weight_m < 3.5) return false;
+                  if (galleryFilter === 'ligera' && b.weight_m >= 3.0) return false;
+                  if (galleryFilter === 'española' && !spanishOrigins.includes(b.origin || '')) return false;
+                  if (galleryFilter === 'francesa' && !frenchOrigins.includes(b.origin || '')) return false;
+                  return true;
+                });
+                return `${filtered.length} razas`;
+              })()}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+            {breeds.filter(b => {
+              const spanishOrigins = ['España','Cataluña','Galicia','Asturias','País Vasco','Aragón'];
+              const frenchOrigins = ['Francia'];
+              const q = gallerySearch.toLowerCase();
+              if (q && !b.name.toLowerCase().includes(q) && !(b.origin || '').toLowerCase().includes(q)) return false;
+              if (galleryFilter === 'pesada' && b.weight_m < 3.5) return false;
+              if (galleryFilter === 'ligera' && b.weight_m >= 3.0) return false;
+              if (galleryFilter === 'española' && !spanishOrigins.includes(b.origin || '')) return false;
+              if (galleryFilter === 'francesa' && !frenchOrigins.includes(b.origin || '')) return false;
+              return true;
+            }).map(breed => {
+              // Mini radar chart data (normalize 0-1)
+              const radarData = [
+                { label: 'Peso', value: Math.min(1, breed.weight_m / 5.5) },
+                { label: 'Huevos', value: Math.min(1, breed.eggs_per_year / 280) },
+                { label: 'Canal', value: Math.min(1, breed.carcass_pct / 80) },
+                { label: 'Crec.', value: breed.growth === 'rápido' ? 0.9 : breed.growth === 'medio' ? 0.6 : 0.3 },
+              ];
+              const cx = 40, cy = 36, r = 28;
+              const radarPoints = radarData.map((d, i) => {
+                const angle = (Math.PI * 2 * i) / radarData.length - Math.PI / 2;
+                return `${cx + r * d.value * Math.cos(angle)},${cy + r * d.value * Math.sin(angle)}`;
+              }).join(' ');
+              const radarAxes = radarData.map((_, i) => {
+                const angle = (Math.PI * 2 * i) / radarData.length - Math.PI / 2;
+                return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+              });
+
+              return (
+                <div key={breed.name} onClick={() => setSelectedBreed(breed)} style={{
+                  background: 'white', borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
+                  border: '1px solid var(--neutral-100)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  transition: 'transform .15s, box-shadow .15s',
+                  display: 'flex', flexDirection: 'row',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; }}
+                >
+                  {/* Left: Photo */}
+                  <div style={{ width: 100, minHeight: 120, flexShrink: 0, background: 'var(--neutral-50)', position: 'relative', overflow: 'hidden' }}>
+                    <img
+                      src={`${CAPONES_API}/images/males/${breed.name.toLowerCase().replace(/ /g, '_')}.jpg`}
+                      alt={breed.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex');
+                      }}
+                    />
+                    <div style={{ display: 'none', position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', background: 'var(--neutral-50)' }}>
+                      <span style={{ fontSize: 36 }}>🐓</span>
+                    </div>
+                  </div>
+
+                  {/* Right: Info + mini radar */}
+                  <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>{breed.name}</div>
+                      {breed.origin && <div style={{ fontSize: 10, color: 'var(--neutral-400)', marginTop: 1 }}>📍 {breed.origin}</div>}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6, fontSize: 10, color: 'var(--neutral-500)', flexWrap: 'wrap' }}>
+                        <span>♂{breed.weight_m}kg</span>
+                        <span>♀{breed.weight_f}kg</span>
+                        <span>🥚{breed.eggs_per_year}</span>
+                        <span>{breed.carcass_pct}%</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: breed.growth === 'rápido' ? '#ECFDF5' : breed.growth === 'lento' ? '#FEF3C7' : '#EFF6FF', color: breed.growth === 'rápido' ? '#059669' : breed.growth === 'lento' ? '#92400E' : '#2563EB', fontWeight: 600 }}>
+                          {breed.growth}
+                        </span>
+                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'var(--neutral-50)', color: 'var(--neutral-500)' }}>
+                          {breed.comb}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Mini SVG radar chart */}
+                    <svg width={80} height={72} viewBox="0 0 80 72" style={{ marginTop: 4, alignSelf: 'flex-end' }}>
+                      {/* Grid */}
+                      {[0.33, 0.66, 1].map(s => (
+                        <polygon key={s} points={radarData.map((_, i) => {
+                          const angle = (Math.PI * 2 * i) / radarData.length - Math.PI / 2;
+                          return `${cx + r * s * Math.cos(angle)},${cy + r * s * Math.sin(angle)}`;
+                        }).join(' ')} fill="none" stroke="var(--neutral-200)" strokeWidth={0.5} />
+                      ))}
+                      {radarAxes.map((a, i) => (
+                        <line key={i} x1={cx} y1={cy} x2={a.x} y2={a.y} stroke="var(--neutral-200)" strokeWidth={0.5} />
+                      ))}
+                      {/* Data fill */}
+                      <polygon points={radarPoints} fill="rgba(176,125,43,0.2)" stroke="var(--primary-500)" strokeWidth={1.2} />
+                      {/* Labels */}
+                      {radarData.map((d, i) => {
+                        const angle = (Math.PI * 2 * i) / radarData.length - Math.PI / 2;
+                        const lx = cx + (r + 10) * Math.cos(angle);
+                        const ly = cy + (r + 10) * Math.sin(angle);
+                        return <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={7} fill="var(--neutral-400)">{d.label}</text>;
+                      })}
+                    </svg>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {/* Breed detail modal */}

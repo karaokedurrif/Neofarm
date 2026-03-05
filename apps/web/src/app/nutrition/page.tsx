@@ -229,6 +229,60 @@ export default function NutritionPage() {
   const mixPrecio = selectedIngs.reduce((s, i) => s + i.precio * (i.porcentaje || 0) / 100, 0);
   const fase = FASES[selectedFase];
 
+  // Auto-optimize LP (greedy min-cost approach)
+  const autoOptimize = () => {
+    const targetProtein = parseFloat(fase.proteina.split('-')[0]) || 16;
+    const targetEnergia = fase.energiaKcal;
+    const available = ingredients.filter(i => i.selected);
+    if (available.length === 0) return;
+
+    // Sort by price per protein unit (ascending = cheapest protein first)
+    const sorted = [...available].sort((a, b) => {
+      const cpa = a.proteina > 0 ? a.precio / a.proteina : 999;
+      const cpb = b.proteina > 0 ? b.precio / b.proteina : 999;
+      return cpa - cpb;
+    });
+
+    // Greedy allocation: fill with cheapest protein source first, then energy fillers
+    const alloc: Record<string, number> = {};
+    let remaining = 100;
+    let currentProtein = 0;
+
+    // First pass: allocate high-protein sources to meet protein target
+    for (const ing of sorted.filter(i => i.proteina > 15)) {
+      if (currentProtein >= targetProtein || remaining <= 0) break;
+      const needed = Math.min(
+        Math.ceil(((targetProtein - currentProtein) / ing.proteina) * 100),
+        remaining,
+        40 // max 40% of any single ingredient
+      );
+      alloc[ing.nombre] = needed;
+      currentProtein += ing.proteina * needed / 100;
+      remaining -= needed;
+    }
+
+    // Second pass: fill with energy sources (cereals)
+    for (const ing of sorted.filter(i => i.proteina <= 15 && i.energia > 2500)) {
+      if (remaining <= 0) break;
+      const amount = Math.min(remaining, 35);
+      alloc[ing.nombre] = amount;
+      remaining -= amount;
+    }
+
+    // Third pass: distribute remainder
+    if (remaining > 0 && sorted.length > 0) {
+      const last = sorted[sorted.length - 1];
+      alloc[last.nombre] = (alloc[last.nombre] || 0) + remaining;
+    }
+
+    // Apply allocations
+    setIngredients(prev => prev.map(ing => ({
+      ...ing,
+      porcentaje: alloc[ing.nombre] || 0,
+      selected: ing.selected || (alloc[ing.nombre] || 0) > 0,
+    })));
+  };
+
   // Finition calculator
   const receta = FINITION_DATA.recetas[recetaIdx];
   const consumoDiarioKg = 0.15; // ~150g/día/capón
@@ -283,13 +337,43 @@ export default function NutritionPage() {
                 style={{
                   padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                   cursor: 'pointer', border: 'none',
-                  background: selectedFase === i ? 'var(--primary-500)' : 'var(--neutral-800)',
-                  color: selectedFase === i ? '#fff' : 'var(--neutral-300)',
+                  background: selectedFase === i ? 'var(--primary-500)' : 'var(--neutral-100)',
+                  color: selectedFase === i ? '#fff' : 'var(--neutral-600)',
                 }}
               >
                 {f.nombre}
               </button>
             ))}
+          </div>
+
+          {/* Auto-optimize button */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+            <button
+              onClick={autoOptimize}
+              disabled={ingredients.filter(i => i.selected).length < 2}
+              style={{
+                padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, var(--primary-500), var(--primary-600))',
+                color: '#fff', fontWeight: 700, fontSize: 13,
+                opacity: ingredients.filter(i => i.selected).length < 2 ? 0.5 : 1,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
+            >
+              ⚡ Auto-Optimizar (mínimo coste)
+            </button>
+            <button
+              onClick={() => setIngredients(prev => prev.map(ing => ({ ...ing, porcentaje: 0 })))}
+              style={{
+                padding: '10px 16px', borderRadius: 8, border: '1px solid var(--neutral-200)',
+                background: 'var(--neutral-0)', color: 'var(--neutral-600)',
+                fontWeight: 600, fontSize: 13, cursor: 'pointer',
+              }}
+            >
+              🔄 Reset
+            </button>
+            <span style={{ fontSize: 11, color: 'var(--neutral-400)', alignSelf: 'center' }}>
+              Selecciona ≥2 ingredientes y pulsa Auto-Optimizar
+            </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -307,8 +391,8 @@ export default function NutritionPage() {
                   { l: 'Lisina', v: fase.lisina },
                   { l: 'Metionina', v: fase.metionina },
                 ].map(r => (
-                  <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13, borderBottom: '1px solid var(--neutral-800)' }}>
-                    <span style={{ color: 'var(--neutral-400)' }}>{r.l}</span>
+                  <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13, borderBottom: '1px solid var(--neutral-100)' }}>
+                    <span style={{ color: 'var(--neutral-500)' }}>{r.l}</span>
                     <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{r.v}</span>
                   </div>
                 ))}
@@ -331,8 +415,8 @@ export default function NutritionPage() {
                   { l: 'Coste/kg', v: `${mixPrecio.toFixed(3)} €/kg`, ok: true },
                   { l: 'Coste/100kg', v: `${(mixPrecio * 100).toFixed(1)} €`, ok: true },
                 ].map(r => (
-                  <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13, borderBottom: '1px solid var(--neutral-800)' }}>
-                    <span style={{ color: 'var(--neutral-400)' }}>{r.l}</span>
+                  <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13, borderBottom: '1px solid var(--neutral-100)' }}>
+                    <span style={{ color: 'var(--neutral-500)' }}>{r.l}</span>
                     <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)', color: r.ok ? 'var(--ok)' : 'var(--alert)' }}>{r.v}</span>
                   </div>
                 ))}
@@ -348,7 +432,7 @@ export default function NutritionPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
                         <span>{b.l}</span><span>{b.pct.toFixed(0)}%</span>
                       </div>
-                      <div style={{ height: 6, background: 'var(--neutral-700)', borderRadius: 3 }}>
+                      <div style={{ height: 6, background: 'var(--neutral-200)', borderRadius: 3 }}>
                         <div style={{ height: '100%', width: `${b.pct}%`, background: b.pct >= 90 ? 'var(--ok)' : b.pct >= 70 ? '#F59E0B' : 'var(--alert)', borderRadius: 3, transition: 'width .3s' }} />
                       </div>
                     </div>
@@ -542,7 +626,7 @@ export default function NutritionPage() {
                     { l: 'Bicheo', v: e.bicheo },
                     { l: 'Ajuste pienso', v: e.reduccionPienso },
                   ].map(r => (
-                    <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12, borderBottom: '1px solid var(--neutral-800)' }}>
+                    <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12, borderBottom: '1px solid var(--neutral-100)' }}>
                       <span style={{ color: 'var(--neutral-400)' }}>{r.l}</span>
                       <span style={{ fontWeight: 600, color: e.color }}>{r.v}</span>
                     </div>
@@ -652,8 +736,8 @@ export default function NutritionPage() {
                       onClick={() => setRecetaIdx(i)}
                       style={{
                         padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
-                        background: recetaIdx === i ? 'var(--primary-500)15' : 'var(--neutral-800)',
-                        border: `1px solid ${recetaIdx === i ? 'var(--primary-500)' : 'var(--neutral-700)'}`,
+                        background: recetaIdx === i ? 'var(--primary-500)15' : 'var(--neutral-50)',
+                        border: `1px solid ${recetaIdx === i ? 'var(--primary-500)' : 'var(--neutral-200)'}`,
                       }}
                     >
                       <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 2 }}>
