@@ -8,7 +8,14 @@ pnpm install --no-frozen-lockfile
 cd /workspace/packages/core && pnpm build 2>/dev/null || true
 cd /workspace/packages/ui && pnpm build 2>/dev/null || true
 cd /workspace/packages/species-config && pnpm build 2>/dev/null || true
-# Start Next.js dev server
+# Build and start Next.js in production mode
 cd /workspace/apps/web
-rm -rf .next
-exec pnpm dev
+# Keep existing build if it exists, otherwise build
+if [ ! -f ".next/BUILD_ID" ]; then
+  echo "Building Next.js for production..."
+  pnpm build
+else
+  echo "Using existing Next.js build..."
+fi
+echo "Starting Next.js in production mode..."
+exec pnpm start
