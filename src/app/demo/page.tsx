@@ -2,42 +2,72 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Mail } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Mail, Loader2 } from 'lucide-react';
 
 interface FormData {
-  nombre: string;
+  name: string;
   email: string;
-  nombreGranja: string;
-  tipoExplotacion: 'vacuno' | 'porcino' | 'mixto' | 'otro' | '';
-  numeroAnimales: string;
-  telefono: string;
+  farm_name: string;
+  farm_type: 'bovine' | 'porcine' | 'mixed' | '';
+  farm_size: string;
+  phone: string;
+}
+
+interface DemoResponse {
+  success: boolean;
+  message: string;
+  demo_url: string;
+  demo_email: string;
+  demo_password: string;
 }
 
 export default function DemoPage() {
   const [formData, setFormData] = useState<FormData>({
-    nombre: '',
+    name: '',
     email: '',
-    nombreGranja: '',
-    tipoExplotacion: '',
-    numeroAnimales: '',
-    telefono: '',
+    farm_name: '',
+    farm_type: '',
+    farm_size: '',
+    phone: '',
   });
 
-  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<DemoResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
-    // Simular envío (después integrar con API)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // TODO: Enviar a API /api/demo-requests
-    console.log('Demo request:', formData);
-    
-    setLoading(false);
-    setSubmitted(true);
+    try {
+      const res = await fetch('https://api-v2.vacasdata.com/api/v1/customers/demo-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          farm_name: formData.farm_name || null,
+          farm_type: formData.farm_type,
+          farm_size: formData.farm_size ? parseInt(formData.farm_size) : null,
+          source: 'landing_demo',
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setResult(data);
+      } else {
+        setError(data.detail || 'Error al procesar la solicitud');
+      }
+    } catch (e) {
+      setError('Error de conexión. Inténtalo de nuevo.');
+      console.error('Error submitting demo request:', e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -47,21 +77,7 @@ export default function DemoPage() {
     }));
   };
 
-  if (submitted) {
-    const hubUrl = formData.tipoExplotacion === 'vacuno' 
-      ? 'https://hub.vacasdata.com/login?demo=bovine'
-      : formData.tipoExplotacion === 'porcino'
-      ? 'https://hub.porcdata.com/login?demo=porcine'
-      : 'https://hub.vacasdata.com/login';
-
-    const credentials = formData.tipoExplotacion === 'porcino' ? {
-      email: 'demo-porcine@neofarm.io',
-      password: 'demo123'
-    } : {
-      email: 'demo-bovine@neofarm.io',
-      password: 'demo123'
-    };
-
+  if (result) {
     return (
       <div className="min-h-screen bg-[var(--warm-50)] flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -74,36 +90,44 @@ export default function DemoPage() {
           </h1>
           
           <div className="mb-6">
-            <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 mb-4">
+            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 mb-4">
               <div className="flex items-center gap-2 mb-3">
-                <Mail className="w-5 h-5 text-amber-600" />
-                <p className="text-sm font-semibold text-amber-900">
-                  Credenciales de acceso
+                <Mail className="w-5 h-5 text-green-600" />
+                <p className="text-sm font-semibold text-green-900">
+                  ✅ Email enviado a {formData.email}
                 </p>
               </div>
+              <p className="text-sm text-gray-600 mb-4">
+                {result.message}
+              </p>
+              
               <div className="text-left space-y-2">
-                <div className="bg-white rounded p-3 border border-amber-200">
-                  <p className="text-xs text-gray-500 mb-1">Usuario</p>
-                  <p className="font-mono text-sm font-semibold text-gray-900">
-                    {credentials.email}
+                <div className="bg-white rounded p-3 border border-green-200">
+                  <p className="text-xs text-gray-500 mb-1">URL Demo</p>
+                  <p className="font-mono text-sm font-semibold text-gray-900 break-all">
+                    {result.demo_url}
                   </p>
                 </div>
-                <div className="bg-white rounded p-3 border border-amber-200">
+                <div className="bg-white rounded p-3 border border-green-200">
+                  <p className="text-xs text-gray-500 mb-1">Usuario</p>
+                  <p className="font-mono text-sm font-semibold text-gray-900">
+                    {result.demo_email}
+                  </p>
+                </div>
+                <div className="bg-white rounded p-3 border border-green-200">
                   <p className="text-xs text-gray-500 mb-1">Contraseña</p>
                   <p className="font-mono text-sm font-semibold text-gray-900">
-                    {credentials.password}
+                    {result.demo_password}
                   </p>
                 </div>
               </div>
             </div>
-            
-            <p className="text-sm text-gray-600 mb-4">
-              Hemos enviado estas credenciales a <strong>{formData.email}</strong>
-            </p>
           </div>
 
           <a
-            href={hubUrl}
+            href={result.demo_url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="block w-full px-8 py-4 bg-[var(--green-900)] text-white font-semibold rounded-lg hover:bg-[var(--green-700)] transition-colors text-center mb-4"
           >
             Acceder a la demo ahora →
@@ -147,9 +171,9 @@ export default function DemoPage() {
             </label>
             <input
               type="text"
-              name="nombre"
+              name="name"
               required
-              value={formData.nombre}
+              value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
               placeholder="Juan García López"
@@ -177,8 +201,8 @@ export default function DemoPage() {
             </label>
             <input
               type="text"
-              name="nombreGranja"
-              value={formData.nombreGranja}
+              name="farm_name"
+              value={formData.farm_name}
               onChange={handleChange}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
               placeholder="Granja San Pedro"
@@ -190,17 +214,16 @@ export default function DemoPage() {
               Tipo de explotación *
             </label>
             <select
-              name="tipoExplotacion"
+              name="farm_type"
               required
-              value={formData.tipoExplotacion}
+              value={formData.farm_type}
               onChange={handleChange}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors bg-white"
             >
               <option value="">Selecciona una opción</option>
-              <option value="vacuno">🐄 Vacuno</option>
-              <option value="porcino">🐷 Porcino</option>
-              <option value="mixto">🐄🐷 Mixto</option>
-              <option value="otro">🐐 Otro (caprino, ovino, avícola)</option>
+              <option value="bovine">🐄 Vacuno</option>
+              <option value="porcine">🐷 Porcino</option>
+              <option value="mixed">🐄🐷 Mixto</option>
             </select>
           </div>
 
@@ -211,8 +234,8 @@ export default function DemoPage() {
               </label>
               <input
                 type="number"
-                name="numeroAnimales"
-                value={formData.numeroAnimales}
+                name="farm_size"
+                value={formData.farm_size}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
                 placeholder="150"
@@ -225,8 +248,8 @@ export default function DemoPage() {
               </label>
               <input
                 type="tel"
-                name="telefono"
-                value={formData.telefono}
+                name="phone"
+                value={formData.phone}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
                 placeholder="+34 600 123 456"

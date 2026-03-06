@@ -2,94 +2,113 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    /* Sistema premium NeoFarm Landing */
-    --green-900: #1B4332;
-    --green-700: #2D6A4F;
-    --green-500: #52B788;
-    --green-100: #D8F3DC;
-    --green-50:  #F0FAF4;
-    
-    --warm-50:   #FEFCF9;
-    --warm-100:  #F5F1EC;
-    --warm-200:  #E8E2DA;
-    
-    --text-900:  #1A1A1A;
-    --text-600:  #555555;
-    --text-400:  #999999;
-    
-    --accent:    #E07A5F;
+    --bg: #070A0F;
+    --bg2: #0B1220;
+    --bg3: #0F172A;
+    --bg4: #111C2E;
+    --bg5: #16243A;
+    --t1: #eef1f6;
+    --t2: #8892a4;
+    --t3: #4a5568;
+    --neon: #14B8A6;
+    --neon2: #0F766E;
+    --cyan: #00d4ff;
+    --amber: #ffb84d;
+    --rose: #ff6b8a;
+    --violet: #a78bfa;
+    --vacas: #3D7A5F;
+    --porc: #3B6B82;
+    --ovo: #B07D2B;
+    --fh: 'Instrument Serif', Georgia, serif;
+    --fb: 'Outfit', sans-serif;
+    --fm: 'JetBrains Mono', monospace;
   }
+
+  * { scrollbar-width: thin; scrollbar-color: rgba(20,184,166,.2) transparent; }
+  *::-webkit-scrollbar { width: 6px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: rgba(20,184,166,.2); border-radius: 3px; }
 
   body {
     @apply antialiased;
-    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    color: var(--text-900);
-    background: var(--warm-50);
+    font-family: var(--fb);
+    color: var(--t1);
+    background: var(--bg);
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
 
-  h1, h2, h3 {
-    font-family: 'Instrument Serif', Georgia, serif;
-  }
+  h1, h2, h3 { font-family: var(--fh); }
+  ::selection { background: rgba(20,184,166,.25); color: #fff; }
 }
 
 @layer components {
-  .btn-primary {
-    @apply px-7 py-3.5 text-white rounded-xl font-semibold transition-all duration-200
-           shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
-    background: var(--primary);
-  }
-  
-  .btn-primary:hover {
-    background: var(--primary-deep);
+  /* ─ Noise overlay ─ */
+  .noise-overlay {
+    position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat; background-size: 256px 256px;
   }
 
-  .btn-secondary {
-    @apply px-7 py-3.5 border text-gray-700 rounded-xl font-medium
-           hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all duration-200;
-    border-color: rgba(0,0,0,0.1);
+  /* ─ Glass cards ─ */
+  .glass-card {
+    background: rgba(11,15,20,.72);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,.05);
+    border-radius: 16px;
+  }
+  .glass-card-hover { @apply glass-card transition-all duration-300; }
+  .glass-card-hover:hover {
+    border-color: rgba(20,184,166,.15);
+    box-shadow: 0 0 30px rgba(20,184,166,.05);
   }
 
-  .section-container {
-    @apply max-w-7xl mx-auto px-12 py-24;
+  /* ─ Buttons ─ */
+  .btn-neon {
+    @apply px-7 py-3.5 font-semibold rounded-xl transition-all duration-200;
+    background: var(--neon); color: #070A0F;
+    box-shadow: 0 0 20px rgba(20,184,166,.2);
   }
-
-  .badge {
-    @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
-           shadow-sm border;
-    background: rgba(255,255,255,0.8);
-    backdrop-filter: blur(28px);
-    border-color: rgba(0,0,0,0.04);
+  .btn-neon:hover {
+    background: var(--neon2);
+    box-shadow: 0 0 30px rgba(20,184,166,.35);
+    transform: translateY(-1px);
   }
-
-  /* HUD panels */
-  .hud {
-    @apply absolute rounded-xl p-4 shadow-2xl border;
-    background: rgba(255,255,255,0.88);
-    backdrop-filter: blur(20px);
-    border-color: rgba(255,255,255,0.7);
+  .btn-ghost {
+    @apply px-7 py-3.5 font-semibold rounded-xl transition-all duration-200;
+    border: 1px solid rgba(255,255,255,.12); color: var(--t1);
   }
+  .btn-ghost:hover { border-color: rgba(20,184,166,.3); color: var(--neon); }
 
-  .hud::before {
-    content: '';
-    @apply absolute top-0 left-5 w-8 h-1 rounded-b;
-    background: var(--accent);
+  /* ─ Layout ─ */
+  .section-container { @apply max-w-7xl mx-auto px-6 lg:px-12; }
+
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
   }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  /* Animations */
+  .mono-data { font-family: var(--fm); color: var(--neon); }
+
+  /* ─ Keyframes ─ */
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(20,184,166,.1); }
+    50% { box-shadow: 0 0 40px rgba(20,184,166,.2); }
+  }
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
+    50% { transform: translateY(-6px); }
   }
+  .animate-float { animation: float 5s ease-in-out infinite; }
 
-  @keyframes ring {
-    0% { transform: scale(1); opacity: 0.6; }
-    100% { transform: scale(2.5); opacity: 0; }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes blink {
@@ -97,15 +116,159 @@
     50% { opacity: 0.4; }
   }
 
-  .animate-float {
-    animation: float 5s ease-in-out infinite;
+  @keyframes nodeAppear {
+    from { opacity: 0; transform: translateY(8px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  .animate-ring {
-    animation: ring 2s ease-out infinite;
+  @keyframes animalIdle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
   }
 
-  .animate-blink {
-    animation: blink 2s ease-in-out infinite;
+  /* ═══ NVIDIA-style 3D Vertical Card ═══ */
+  .vert-card-3d {
+    position: relative;
+    background: rgba(11, 18, 32, 0.72);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+    will-change: transform;
+    transform-style: preserve-3d;
+  }
+  .vert-card-3d:hover {
+    border-color: var(--card-color, rgba(20,184,166,.25));
+    box-shadow:
+      0 0 30px color-mix(in srgb, var(--card-color, #14B8A6) 12%, transparent),
+      0 20px 60px rgba(0,0,0,.4);
+  }
+
+  /* ─ Vertical animal visual area ─ */
+  .vert-visual {
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,.015) 0%, transparent 100%);
+  }
+  .vert-glow {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--card-color, #14B8A6) 0%, transparent 70%);
+    opacity: 0.08;
+    filter: blur(40px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .vert-card-3d:hover .vert-glow {
+    opacity: 0.18;
+    transform: scale(1.3);
+  }
+  .vert-animal {
+    width: 180px; height: 180px;
+    object-fit: contain;
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,.5));
+    transition: transform 0.5s cubic-bezier(.4,0,.2,1);
+    animation: animalIdle 4s ease-in-out infinite;
+  }
+  .vert-card-3d:hover .vert-animal {
+    animation: none;
+    transform: scale(1.08) translateY(-4px);
+  }
+  .vert-visual::after {
+    content: '';
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 20px;
+    background: radial-gradient(ellipse, rgba(255,255,255,.04), transparent 70%);
+    border-radius: 50%;
+  }
+  .vert-content {
+    padding: 1.5rem 2rem 2rem;
+  }
+
+  /* ═══ IoT Data Nodes — CSS overlays ═══ */
+  .dn {
+    position: absolute;
+    background: rgba(7,10,15,.82);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    animation: nodeAppear 0.6s ease forwards;
+    pointer-events: none;
+  }
+  .dn:nth-child(2) { animation-delay: 1.5s; }
+  .dn:nth-child(3) { animation-delay: 1.8s; }
+  .dn:nth-child(4) { animation-delay: 2.1s; }
+  .dn:nth-child(5) { animation-delay: 2.4s; }
+  .dn:nth-child(6) { animation-delay: 2.7s; }
+
+  .dn-icon {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .dn-label {
+    font-family: var(--fm);
+    font-size: 8px; font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--t3);
+  }
+  .dn-value {
+    font-family: var(--fm);
+    font-size: 18px; font-weight: 700;
+    color: var(--t1);
+    line-height: 1;
+  }
+  .dn-value small {
+    font-size: 10px; font-weight: 400;
+    color: var(--t3);
+    margin-left: 2px;
+  }
+  .dn-trend { font-family: var(--fm); font-size: 10px; font-weight: 500; }
+  .dn-trend.up { color: #16A34A; }
+  .dn-trend.down { color: #DC2626; }
+
+  .twin-status {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(7,10,15,.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.05);
+    border-radius: 8px;
+    pointer-events: none;
+    opacity: 0;
+    animation: nodeAppear 0.5s 1s ease forwards;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    animation: blink 2s infinite;
+  }
+  .status-dot.ok { background: #16A34A; box-shadow: 0 0 6px #16A34A; }
+  .status-text {
+    font-family: var(--fm);
+    font-size: 9px;
+    letter-spacing: .06em;
+    color: var(--t3);
   }
 }

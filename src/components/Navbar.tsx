@@ -32,7 +32,7 @@ export default function Navbar() {
         <li><a href="#pricing" className="text-sm font-medium" style={{ color: 'var(--text-mid)', letterSpacing: '0.01em' }}>Precios</a></li>
         <li><a href="#recursos" className="text-sm font-medium" style={{ color: 'var(--text-mid)', letterSpacing: '0.01em' }}>Recursos</a></li>
         <li>
-          <a href="#setup" className="btn-primary text-sm">
+          <a href="/setup" className="btn-primary text-sm">
             Comenzar setup
           </a>
         </li>

@@ -1,464 +1,520 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Check, Cow, PiggyBank, Leaf, FileText, MapPin, Building2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LangProvider, useLang } from '@/config/LangContext';
 
-type ExplotacionTipo = 'vacuno' | 'porcino' | 'mixto' | 'otro' | '';
+/* ─── Types ─── */
+type Vertical = 'vacuno' | 'porcino' | 'avicultura' | 'otro';
+type FarmType = 'extensivo' | 'intensivo' | 'mixto';
 
-interface SetupData {
-  // Paso 1
-  tipoExplotacion: ExplotacionTipo;
-  // Paso 2
-  nombreExplotacion: string;
-  rega: string;
-  provincia: string;
-  numeroAnimales: string;
-  numeroNavesOParcelas: string;
-  // Paso 3
-  modulosSeleccionados: string[];
-  // Paso 4
+interface WizardData {
+  /* Step 1 */
+  vertical: Vertical | '';
+  farmType: FarmType | '';
+  /* Step 2 */
+  farmName: string;
+  contactName: string;
   email: string;
-  password: string;
-  aceptaTerminos: boolean;
+  country: string;
+  province: string;
+  headCount: number;
+  hectares: number;
+  /* Step 3 */
+  modules: string[];
+  /* Step 4 – summary only */
 }
 
-const MODULOS_DISPONIBLES = {
+const VERTICALS: { value: Vertical; label: string; labelEn: string; emoji: string; color: string; hub: string }[] = [
+  { value: 'vacuno',      label: 'Vacuno',      labelEn: 'Cattle',    emoji: '🐄', color: '#3D7A5F', hub: 'https://hub.vacasdata.com/dashboard' },
+  { value: 'porcino',     label: 'Porcino',     labelEn: 'Swine',     emoji: '🐖', color: '#3B6B82', hub: 'https://hub.porcdata.com/dashboard' },
+  { value: 'avicultura',  label: 'Avicultura',  labelEn: 'Poultry',   emoji: '🐔', color: '#B07D2B', hub: 'https://hub.ovosfera.com/dashboard' },
+  { value: 'otro',        label: 'Otro',        labelEn: 'Other',     emoji: '🌾', color: '#6B7280', hub: 'https://neofarm.io' },
+];
+
+const FARM_TYPES: { value: FarmType; es: string; en: string; emoji: string }[] = [
+  { value: 'extensivo', es: 'Extensivo', en: 'Extensive', emoji: '🏔️' },
+  { value: 'intensivo', es: 'Intensivo', en: 'Intensive', emoji: '🏭' },
+  { value: 'mixto',     es: 'Mixto',     en: 'Mixed',     emoji: '🔄' },
+];
+
+const MODULES_MAP: Record<Vertical, { id: string; es: string; en: string; emoji: string; desc_es: string; desc_en: string }[]> = {
   vacuno: [
-    { id: 'gps', nombre: 'GPS/Collares', descripcion: 'Geolocalización rebaño', precio: 3 },
-    { id: 'carbon', nombre: 'Carbono MRV', descripcion: 'Créditos carbono verificables', precio: 5 },
-    { id: 'dehesas', nombre: 'Dehesas', descripcion: 'Gestión parcelas extensivas', precio: 2 },
-    { id: 'genetics', nombre: 'Genética FarmMatch', descripcion: 'Optimización reproductiva', precio: 4 },
-    { id: 'traceability', nombre: 'Trazabilidad', descripcion: 'REGA + SITRAN obligatorio', precio: 1 },
-    { id: 'erp', nombre: 'ERP Ganadero', descripcion: 'Gestión económica', precio: 3 },
+    { id: 'genetics',     es: 'Genética',        en: 'Genetics',       emoji: '🧬', desc_es: 'EPDs, apareamientos, consanguinidad', desc_en: 'EPDs, breeding, inbreeding' },
+    { id: 'health',       es: 'Sanidad',         en: 'Health',         emoji: '💊', desc_es: 'Protocolo vacunal, tratamientos', desc_en: 'Vaccination, treatments' },
+    { id: 'nutrition',    es: 'Nutrición',       en: 'Nutrition',      emoji: '🌿', desc_es: 'Planes alimenticios, GMD, IC', desc_en: 'Feed plans, ADG, FCR' },
+    { id: 'traceability', es: 'Trazabilidad',    en: 'Traceability',   emoji: '📋', desc_es: 'SITRAN, REGA, movimientos', desc_en: 'SITRAN, REGA, movements' },
+    { id: 'carbon',       es: 'Carbono',         en: 'Carbon',         emoji: '🌍', desc_es: 'Huella de carbono, certificación', desc_en: 'Carbon footprint, certification' },
+    { id: 'iot',          es: 'IoT',             en: 'IoT',            emoji: '📡', desc_es: 'Sensores ambientales, GPS collars', desc_en: 'Environmental sensors, GPS collars' },
+    { id: 'geotwin',      es: 'GeoTwin',         en: 'GeoTwin',        emoji: '🗺️', desc_es: 'Gemelo digital de parcelas NDVI', desc_en: 'NDVI parcel digital twin' },
   ],
   porcino: [
-    { id: 'barns', nombre: 'Naves Digitales', descripcion: 'Digital Twin 3D', precio: 5 },
-    { id: 'sensors', nombre: 'Sensores Ambientales', descripcion: 'Temp/Hum/NH3/CO2', precio: 4 },
-    { id: 'ia-vision', nombre: 'IA Vision', descripcion: 'Cámaras + Computer Vision', precio: 6 },
-    { id: 'nutrition', nombre: 'Nutrición Precisión', descripcion: 'Formulación pienso óptima', precio: 3 },
-    { id: 'purines', nombre: 'SmartPurín', descripcion: 'Gestión integral purines', precio: 2 },
-    { id: 'sige', nombre: 'SIGE RD 306/2020', descripcion: 'Cumplimiento normativo', precio: 2 },
-    { id: 'traceability', nombre: 'Trazabilidad', descripcion: 'REGA + SITRAN obligatorio', precio: 1 },
-    { id: 'erp', nombre: 'ERP Ganadero', descripcion: 'Gestión económica', precio: 3 },
-  ]
+    { id: 'barn_iot',     es: 'IoT Naves',       en: 'Barn IoT',       emoji: '🌡️', desc_es: 'Sensores T°/HR/NH₃/CO₂', desc_en: 'T°/RH/NH₃/CO₂ sensors' },
+    { id: 'health',       es: 'Sanidad',         en: 'Health',         emoji: '💊', desc_es: 'SIGE digital, bioseguridad', desc_en: 'Digital SIGE, biosecurity' },
+    { id: 'nutrition',    es: 'Nutrición',       en: 'Nutrition',      emoji: '🌿', desc_es: 'Índice Conversión, dietas', desc_en: 'FCR, feed formulation' },
+    { id: 'traceability', es: 'Trazabilidad',    en: 'Traceability',   emoji: '📋', desc_es: 'Lotes, movimientos, REGA', desc_en: 'Batches, movements, REGA' },
+    { id: 'purines',      es: 'Purines',         en: 'Waste Mgmt',     emoji: '♻️', desc_es: 'SmartPurín, biogás, nitrógeno', desc_en: 'SmartSlurry, biogas, nitrogen' },
+    { id: 'carbon',       es: 'Carbono',         en: 'Carbon',         emoji: '🌍', desc_es: 'Huella de carbono, MRV', desc_en: 'Carbon footprint, MRV' },
+  ],
+  avicultura: [
+    { id: 'barn_iot',     es: 'IoT Naves',       en: 'Barn IoT',       emoji: '🌡️', desc_es: 'Sensores T°/HR/CO₂/luz', desc_en: 'T°/RH/CO₂/light sensors' },
+    { id: 'health',       es: 'Sanidad',         en: 'Health',         emoji: '💊', desc_es: 'Mortalidad, vacunas, alertas', desc_en: 'Mortality, vaccines, alerts' },
+    { id: 'production',   es: 'Producción',      en: 'Production',     emoji: '🥚', desc_es: 'Puesta, clasificación, calidad', desc_en: 'Laying, grading, quality' },
+    { id: 'traceability', es: 'Trazabilidad',    en: 'Traceability',   emoji: '📋', desc_es: 'Lotes, huevos, normativa', desc_en: 'Batches, eggs, regulation' },
+    { id: 'energy',       es: 'Energía',         en: 'Energy',         emoji: '⚡', desc_es: 'Consumo eléctrico, solar', desc_en: 'Electricity, solar' },
+    { id: 'carbon',       es: 'Carbono',         en: 'Carbon',         emoji: '🌍', desc_es: 'Huella de carbono, MRV', desc_en: 'Carbon footprint, MRV' },
+  ],
+  otro: [
+    { id: 'iot',          es: 'IoT',             en: 'IoT',            emoji: '📡', desc_es: 'Sensores genéricos', desc_en: 'Generic sensors' },
+    { id: 'health',       es: 'Sanidad',         en: 'Health',         emoji: '💊', desc_es: 'Gestión sanitaria', desc_en: 'Health management' },
+    { id: 'traceability', es: 'Trazabilidad',    en: 'Traceability',   emoji: '📋', desc_es: 'Movimientos, registros', desc_en: 'Movements, records' },
+    { id: 'carbon',       es: 'Carbono',         en: 'Carbon',         emoji: '🌍', desc_es: 'Huella de carbono', desc_en: 'Carbon footprint' },
+  ],
 };
 
-export default function SetupPage() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [setupData, setSetupData] = useState<SetupData>({
-    tipoExplotacion: '',
-    nombreExplotacion: '',
-    rega: '',
-    provincia: '',
-    numeroAnimales: '',
-    numeroNavesOParcelas: '',
-    modulosSeleccionados: [],
+const COUNTRIES = ['España', 'Portugal', 'Francia', 'Italia', 'Alemania', 'Otro'];
+
+/* ─── Steps config ─── */
+const STEPS = [
+  { id: 1, es: 'Tipo de Explotación', en: 'Operation Type',   icon: '🏡' },
+  { id: 2, es: 'Datos Básicos',       en: 'Basic Data',       icon: '📝' },
+  { id: 3, es: 'Módulos',             en: 'Modules',          icon: '⚙️' },
+  { id: 4, es: 'Resumen',             en: 'Summary',          icon: '🚀' },
+];
+
+/* ─── Wizard Inner (inside LangProvider) ─── */
+function WizardInner() {
+  const { lang, setLang, t } = useLang();
+  const isEs = lang === 'es';
+
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState<WizardData>({
+    vertical: '',
+    farmType: '',
+    farmName: '',
+    contactName: '',
     email: '',
-    password: '',
-    aceptaTerminos: false,
+    country: 'España',
+    province: '',
+    headCount: 0,
+    hectares: 0,
+    modules: [],
   });
+  const [submitted, setSubmitted] = useState(false);
 
-  const handleNext = () => {
-    if (currentStep < 4) setCurrentStep(currentStep + 1);
-  };
+  const update = useCallback(<K extends keyof WizardData>(key: K, val: WizardData[K]) => {
+    setData(prev => ({ ...prev, [key]: val }));
+  }, []);
 
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-  };
-
-  const handleFinish = async () => {
-    // TODO: Llamar a API para crear tenant y usuario
-    console.log('Setup completado:', setupData);
-    
-    // Redirigir al hub correspondiente
-    const hubUrl = setupData.tipoExplotacion === 'vacuno'
-      ? 'https://hub.vacasdata.com'
-      : setupData.tipoExplotacion === 'porcino'
-      ? 'https://hub.porcdata.com'
-      : 'https://hub.vacasdata.com';
-    
-    window.location.href = hubUrl;
-  };
-
-  const toggleModulo = (moduloId: string) => {
-    setSetupData(prev => ({
+  const toggleModule = (id: string) => {
+    setData(prev => ({
       ...prev,
-      modulosSeleccionados: prev.modulosSeleccionados.includes(moduloId)
-        ? prev.modulosSeleccionados.filter(id => id !== moduloId)
-        : [...prev.modulosSeleccionados, moduloId]
+      modules: prev.modules.includes(id)
+        ? prev.modules.filter(m => m !== id)
+        : [...prev.modules, id],
     }));
   };
 
-  const modulosDisponibles = setupData.tipoExplotacion === 'vacuno' 
-    ? MODULOS_DISPONIBLES.vacuno
-    : setupData.tipoExplotacion === 'porcino'
-    ? MODULOS_DISPONIBLES.porcino
-    : [];
+  const canNext = (): boolean => {
+    switch (step) {
+      case 1: return !!data.vertical && !!data.farmType;
+      case 2: return !!data.farmName && !!data.email && data.headCount > 0;
+      case 3: return data.modules.length > 0;
+      default: return true;
+    }
+  };
 
-  const precioTotal = modulosDisponibles
-    .filter(m => setupData.modulosSeleccionados.includes(m.id))
-    .reduce((sum, m) => sum + m.precio, 0);
+  const handleComplete = () => {
+    setSubmitted(true);
+    // Store in localStorage for DAFO integration
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('neofarm_setup', JSON.stringify(data));
+    }
+    // Redirect after 3s
+    const vert = VERTICALS.find(v => v.value === data.vertical);
+    setTimeout(() => {
+      if (vert) window.location.href = vert.hub;
+    }, 3000);
+  };
 
-  return (
-    <div className="min-h-screen bg-[var(--warm-50)]">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4">
-            <ArrowLeft className="w-4 h-4" />
-            Volver al inicio
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Configurar mi granja
-          </h1>
-          <p className="text-gray-600">
-            Paso {currentStep} de 4
-          </p>
-          
-          {/* Progress bar */}
-          <div className="flex gap-2 mt-4">
-            {[1, 2, 3, 4].map(step => (
-              <div 
-                key={step}
-                className={`h-2 flex-1 rounded-full transition-colors ${
-                  step <= currentStep ? 'bg-green-600' : 'bg-gray-200'
-                }`}
-              />
+  const vertColor = VERTICALS.find(v => v.value === data.vertical)?.color ?? '#14B8A6';
+
+  /* ─── Glass Card wrapper ─── */
+  const Glass = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+    <div className={`relative rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl p-8 ${className}`}>
+      {children}
+    </div>
+  );
+
+  /* ─── Select Button ─── */
+  const SelectBtn = ({ selected, onClick, children, color = '#14B8A6' }: {
+    selected: boolean; onClick: () => void; children: React.ReactNode; color?: string;
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative w-full text-left p-5 rounded-xl border-2 transition-all duration-200"
+      style={{
+        borderColor: selected ? color : 'rgba(255,255,255,0.06)',
+        background: selected ? `${color}10` : 'rgba(255,255,255,0.02)',
+      }}
+    >
+      {children}
+      {selected && (
+        <span className="absolute top-3 right-3 text-lg" style={{ color }}>✓</span>
+      )}
+    </button>
+  );
+
+  /* ─── STEP 1: Vertical + Farm Type ─── */
+  const Step1 = () => (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-heading font-bold text-[var(--t1)] mb-2">
+          {isEs ? 'Selecciona tu vertical' : 'Select your vertical'}
+        </h2>
+        <p className="text-[var(--t3)]">
+          {isEs ? '¿Con qué especie trabajas principalmente?' : 'What species do you primarily work with?'}
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        {VERTICALS.map(v => (
+          <SelectBtn key={v.value} selected={data.vertical === v.value} onClick={() => update('vertical', v.value)} color={v.color}>
+            <div className="text-3xl mb-2">{v.emoji}</div>
+            <div className="font-semibold text-[var(--t1)]">{isEs ? v.label : v.labelEn}</div>
+          </SelectBtn>
+        ))}
+      </div>
+
+      {data.vertical && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <h3 className="text-lg font-semibold text-[var(--t1)] mb-3">
+            {isEs ? 'Modelo productivo' : 'Production model'}
+          </h3>
+          <div className="grid grid-cols-3 gap-3">
+            {FARM_TYPES.map(ft => (
+              <SelectBtn key={ft.value} selected={data.farmType === ft.value} onClick={() => update('farmType', ft.value)} color={vertColor}>
+                <div className="text-2xl mb-1">{ft.emoji}</div>
+                <div className="text-sm font-semibold text-[var(--t1)]">{isEs ? ft.es : ft.en}</div>
+              </SelectBtn>
             ))}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      )}
+    </div>
+  );
 
-      {/* Content */}
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          {/* PASO 1: Tipo de explotación */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  ¿Qué tipo de explotación tienes?
-                </h2>
-                <p className="text-gray-600">
-                  Selecciona el tipo que mejor describa tu actividad
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  onClick={() => setSetupData(prev => ({ ...prev, tipoExplotacion: 'vacuno' }))}
-                  className={`p-6 border-2 rounded-xl text-left transition-all hover:shadow-md ${
-                    setupData.tipoExplotacion === 'vacuno'
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}
-                >
-                  <div className="text-4xl mb-3">🐄</div>
-                  <h3 className="font-bold text-lg mb-2">Vacuno extensivo</h3>
-                  <p className="text-sm text-gray-600">
-                    GPS, dehesas, carbono, genética
-                  </p>
-                </button>
-
-                <button
-                  onClick={() => setSetupData(prev => ({ ...prev, tipoExplotacion: 'porcino' }))}
-                  className={`p-6 border-2 rounded-xl text-left transition-all hover:shadow-md ${
-                    setupData.tipoExplotacion === 'porcino'
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}
-                >
-                  <div className="text-4xl mb-3">🐷</div>
-                  <h3 className="font-bold text-lg mb-2">Porcino intensivo</h3>
-                  <p className="text-sm text-gray-600">
-                    Naves, sensores, IA, nutrición
-                  </p>
-                </button>
-
-                <button
-                  onClick={() => setSetupData(prev => ({ ...prev, tipoExplotacion: 'mixto' }))}
-                  className={`p-6 border-2 rounded-xl text-left transition-all hover:shadow-md ${
-                    setupData.tipoExplotacion === 'mixto'
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}
-                >
-                  <div className="text-4xl mb-3">🐄🐷</div>
-                  <h3 className="font-bold text-lg mb-2">Mixto</h3>
-                  <p className="text-sm text-gray-600">
-                    Combina múltiples especies
-                  </p>
-                </button>
-
-                <button
-                  onClick={() => setSetupData(prev => ({ ...prev, tipoExplotacion: 'otro' }))}
-                  className={`p-6 border-2 rounded-xl text-left transition-all hover:shadow-md ${
-                    setupData.tipoExplotacion === 'otro'
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}
-                >
-                  <div className="text-4xl mb-3">🐐</div>
-                  <h3 className="font-bold text-lg mb-2">Otro</h3>
-                  <p className="text-sm text-gray-600">
-                    Caprino, ovino, avícola
-                    <span className="block mt-1 text-amber-600 font-semibold">Próximamente</span>
-                  </p>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* PASO 2: Datos de la granja */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Cuéntanos sobre tu granja
-                </h2>
-                <p className="text-gray-600">
-                  Información básica para personalizar tu experiencia
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Nombre de la explotación *
-                  </label>
-                  <input
-                    type="text"
-                    value={setupData.nombreExplotacion}
-                    onChange={e => setSetupData(prev => ({ ...prev, nombreExplotacion: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
-                    placeholder="Granja San Pedro"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    REGA (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={setupData.rega}
-                    onChange={e => setSetupData(prev => ({ ...prev, rega: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
-                    placeholder="ES280790001234"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Provincia *
-                  </label>
-                  <input
-                    type="text"
-                    value={setupData.provincia}
-                    onChange={e => setSetupData(prev => ({ ...prev, provincia: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
-                    placeholder="Salamanca"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Nº de animales *
-                    </label>
-                    <input
-                      type="number"
-                      value={setupData.numeroAnimales}
-                      onChange={e => setSetupData(prev => ({ ...prev, numeroAnimales: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
-                      placeholder="250"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Nº de {setupData.tipoExplotacion === 'vacuno' ? 'parcelas' : 'naves'}
-                    </label>
-                    <input
-                      type="number"
-                      value={setupData.numeroNavesOParcelas}
-                      onChange={e => setSetupData(prev => ({ ...prev, numeroNavesOParcelas: e.target.value }))}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
-                      placeholder="4"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* PASO 3: Módulos */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  ¿Qué módulos necesitas?
-                </h2>
-                <p className="text-gray-600">
-                  Selecciona las funcionalidades que quieres activar
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {modulosDisponibles.map(modulo => (
-                  <button
-                    key={modulo.id}
-                    onClick={() => toggleModulo(modulo.id)}
-                    className={`w-full p-4 border-2 rounded-lg text-left transition-all flex items-start gap-4 ${
-                      setupData.modulosSeleccionados.includes(modulo.id)
-                        ? 'border-green-600 bg-green-50'
-                        : 'border-gray-200 hover:border-green-300'
-                    }`}
-                  >
-                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      setupData.modulosSeleccionados.includes(modulo.id)
-                        ? 'bg-green-600 border-green-600'
-                        : 'border-gray-300'
-                    }`}>
-                      {setupData.modulosSeleccionados.includes(modulo.id) && (
-                        <Check className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-gray-900">{modulo.nombre}</h3>
-                        <span className="text-sm font-semibold text-gray-600">
-                          €{modulo.precio}/mes
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">{modulo.descripcion}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-700">
-                    Precio estimado mensual:
-                  </span>
-                  <span className="text-2xl font-bold text-green-600">
-                    €{precioTotal}/mes
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  + IVA • Primer mes gratis • Sin permanencia
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* PASO 4: Crear cuenta */}
-          {currentStep === 4 && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Crea tu cuenta
-                </h2>
-                <p className="text-gray-600">
-                  Último paso para empezar a usar {setupData.tipoExplotacion === 'vacuno' ? 'VacasData' : setupData.tipoExplotacion === 'porcino' ? 'PorcData' : 'NeoFarm'}
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={setupData.email}
-                    onChange={e => setSetupData(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
-                    placeholder="juan@migranja.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Contraseña *
-                  </label>
-                  <input
-                    type="password"
-                    value={setupData.password}
-                    onChange={e => setSetupData(prev => ({ ...prev, password: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
-                    placeholder="Mínimo 8 caracteres"
-                  />
-                </div>
-
-                <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={setupData.aceptaTerminos}
-                    onChange={e => setSetupData(prev => ({ ...prev, aceptaTerminos: e.target.checked }))}
-                    className="mt-1 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                  />
-                  <span className="text-sm text-gray-600">
-                    Acepto los <a href="#" className="text-green-600 hover:underline">términos y condiciones</a> y la <a href="#" className="text-green-600 hover:underline">política de privacidad</a>
-                  </span>
-                </label>
-              </div>
-
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">
-                  Resumen de tu configuración:
-                </h3>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• {setupData.nombreExplotacion || 'Tu granja'}</li>
-                  <li>• Tipo: {setupData.tipoExplotacion}</li>
-                  <li>• {setupData.numeroAnimales} animales</li>
-                  <li>• {setupData.modulosSeleccionados.length} módulos seleccionados</li>
-                  <li>• Precio: €{precioTotal}/mes</li>
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Navigation buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-            {currentStep > 1 && (
-              <button
-                onClick={handleBack}
-                className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                ← Atrás
-              </button>
-            )}
-            
-            <div className="ml-auto">
-              {currentStep < 4 && (
-                <button
-                  onClick={handleNext}
-                  disabled={
-                    (currentStep === 1 && !setupData.tipoExplotacion) ||
-                    (currentStep === 2 && (!setupData.nombreExplotacion || !setupData.provincia || !setupData.numeroAnimales))
-                  }
-                  className="px-8 py-3 bg-[var(--green-900)] text-white font-semibold rounded-lg hover:bg-[var(--green-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Siguiente →
-                </button>
-              )}
-
-              {currentStep === 4 && (
-                <button
-                  onClick={handleFinish}
-                  disabled={!setupData.email || !setupData.password || !setupData.aceptaTerminos}
-                  className="px-8 py-3 bg-[var(--green-900)] text-white font-semibold rounded-lg hover:bg-[var(--green-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Crear granja →
-                </button>
-              )}
-            </div>
+  /* ─── STEP 2: Basic Data ─── */
+  const Step2 = () => {
+    const inputCls = "w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-[var(--t1)] placeholder:text-[var(--t3)]/50 focus:border-[var(--neon)] focus:ring-1 focus:ring-[var(--neon)]/20 outline-none transition-all font-body";
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-heading font-bold text-[var(--t1)]">
+          {isEs ? 'Datos de tu explotación' : 'Your operation data'}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-sm font-semibold text-[var(--t2)] mb-2">
+              {isEs ? 'Nombre de la explotación *' : 'Farm name *'}
+            </label>
+            <input type="text" value={data.farmName} onChange={e => update('farmName', e.target.value)} placeholder={isEs ? 'Ej: Dehesa Los Alcornoques' : 'Ex: Oak Grove Ranch'} className={inputCls} required />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-[var(--t2)] mb-2">
+              {isEs ? 'Nombre de contacto' : 'Contact name'}
+            </label>
+            <input type="text" value={data.contactName} onChange={e => update('contactName', e.target.value)} placeholder={isEs ? 'Tu nombre' : 'Your name'} className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-[var(--t2)] mb-2">Email *</label>
+            <input type="email" value={data.email} onChange={e => update('email', e.target.value)} placeholder="tucorreo@ejemplo.com" className={inputCls} required />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-[var(--t2)] mb-2">
+              {isEs ? 'País' : 'Country'}
+            </label>
+            <select value={data.country} onChange={e => update('country', e.target.value)} className={inputCls}>
+              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-[var(--t2)] mb-2">
+              {isEs ? 'Provincia / Región' : 'Province / Region'}
+            </label>
+            <input type="text" value={data.province} onChange={e => update('province', e.target.value)} placeholder={isEs ? 'Cáceres' : 'Province'} className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-[var(--t2)] mb-2">
+              {isEs ? 'Nº de cabezas / animales *' : 'Head count *'}
+            </label>
+            <input type="number" value={data.headCount || ''} onChange={e => update('headCount', parseInt(e.target.value) || 0)} min={1} placeholder="500" className={inputCls} required />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-[var(--t2)] mb-2">
+              {isEs ? 'Hectáreas (aprox.)' : 'Hectares (approx.)'}
+            </label>
+            <input type="number" value={data.hectares || ''} onChange={e => update('hectares', parseInt(e.target.value) || 0)} min={0} placeholder="150" className={inputCls} />
           </div>
         </div>
       </div>
+    );
+  };
+
+  /* ─── STEP 3: Modules ─── */
+  const Step3 = () => {
+    const modules = data.vertical ? MODULES_MAP[data.vertical as Vertical] : [];
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-heading font-bold text-[var(--t1)] mb-2">
+            {isEs ? 'Selecciona módulos de interés' : 'Select modules of interest'}
+          </h2>
+          <p className="text-[var(--t3)]">
+            {isEs ? 'Podrás cambiarlos después. Selecciona al menos uno.' : 'You can change these later. Select at least one.'}
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {modules.map(m => {
+            const sel = data.modules.includes(m.id);
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => toggleModule(m.id)}
+                className="relative text-left p-5 rounded-xl border-2 transition-all duration-200"
+                style={{
+                  borderColor: sel ? vertColor : 'rgba(255,255,255,0.06)',
+                  background: sel ? `${vertColor}10` : 'rgba(255,255,255,0.02)',
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{m.emoji}</span>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-[var(--t1)]">{isEs ? m.es : m.en}</h3>
+                    <p className="text-sm text-[var(--t3)] mt-1">{isEs ? m.desc_es : m.desc_en}</p>
+                  </div>
+                  {sel && <span className="text-lg" style={{ color: vertColor }}>✓</span>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  /* ─── STEP 4: Summary ─── */
+  const Step4 = () => {
+    const vert = VERTICALS.find(v => v.value === data.vertical);
+    const modules = data.vertical ? MODULES_MAP[data.vertical as Vertical].filter(m => data.modules.includes(m.id)) : [];
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-heading font-bold text-[var(--t1)]">
+          {isEs ? 'Resumen de tu configuración' : 'Your configuration summary'}
+        </h2>
+
+        <Glass className="space-y-4">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-3xl">{vert?.emoji}</span>
+            <div>
+              <div className="font-bold text-[var(--t1)] text-lg">{data.farmName}</div>
+              <div className="text-sm text-[var(--t3)]">{isEs ? vert?.label : vert?.labelEn} · {isEs ? FARM_TYPES.find(f => f.value === data.farmType)?.es : FARM_TYPES.find(f => f.value === data.farmType)?.en}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-[var(--t3)]">{isEs ? 'Contacto' : 'Contact'}:</span>
+              <span className="text-[var(--t1)] ml-2">{data.contactName || '—'}</span>
+            </div>
+            <div>
+              <span className="text-[var(--t3)]">Email:</span>
+              <span className="text-[var(--t1)] ml-2">{data.email}</span>
+            </div>
+            <div>
+              <span className="text-[var(--t3)]">{isEs ? 'Ubicación' : 'Location'}:</span>
+              <span className="text-[var(--t1)] ml-2">{data.province ? `${data.province}, ` : ''}{data.country}</span>
+            </div>
+            <div>
+              <span className="text-[var(--t3)]">{isEs ? 'Cabezas' : 'Head count'}:</span>
+              <span className="text-[var(--t1)] ml-2">{data.headCount.toLocaleString()}</span>
+            </div>
+            {data.hectares > 0 && (
+              <div>
+                <span className="text-[var(--t3)]">{isEs ? 'Hectáreas' : 'Hectares'}:</span>
+                <span className="text-[var(--t1)] ml-2">{data.hectares.toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-white/[0.06]">
+            <h4 className="text-sm font-semibold text-[var(--t2)] mb-3">
+              {isEs ? 'Módulos seleccionados' : 'Selected modules'} ({modules.length})
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {modules.map(m => (
+                <span key={m.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
+                  style={{ background: `${vertColor}20`, color: vertColor }}>
+                  {m.emoji} {isEs ? m.es : m.en}
+                </span>
+              ))}
+            </div>
+          </div>
+        </Glass>
+
+        <div className="p-4 rounded-xl border border-[var(--neon)]/20 bg-[var(--neon)]/5">
+          <p className="text-sm text-[var(--t2)]">
+            {isEs
+              ? '🎉 Al completar, se creará tu hub personalizado y serás redirigido al dashboard.'
+              : '🎉 Upon completion, your personalized hub will be created and you\'ll be redirected to the dashboard.'}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  /* ─── Submitted state ─── */
+  if (submitted) {
+    const vert = VERTICALS.find(v => v.value === data.vertical);
+    return (
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center px-4">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-md">
+          <div className="text-6xl mb-6">🎉</div>
+          <h1 className="text-3xl font-heading font-bold text-[var(--t1)] mb-4">
+            {isEs ? '¡Hub creado!' : 'Hub created!'}
+          </h1>
+          <p className="text-[var(--t3)] mb-6">
+            {isEs
+              ? `Redirigiendo a ${vert?.label ?? 'tu'} hub...`
+              : `Redirecting to ${vert?.labelEn ?? 'your'} hub...`}
+          </p>
+          <div className="w-48 h-1 bg-white/10 rounded-full mx-auto overflow-hidden">
+            <motion.div className="h-full rounded-full" style={{ background: vertColor }}
+              initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: 3 }} />
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  /* ─── Main Layout ─── */
+  return (
+    <div className="min-h-screen bg-[var(--bg)]">
+      {/* Header */}
+      <header className="border-b border-white/[0.06] bg-[var(--bg)]/80 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2">
+            <span className="text-xl font-heading font-bold text-[var(--neon)]">Neo</span>
+            <span className="text-xl font-heading font-bold text-[var(--t1)]">Farm</span>
+          </a>
+          <div className="flex items-center gap-4">
+            <button onClick={() => setLang(isEs ? 'en' : 'es')}
+              className="text-xs font-mono text-[var(--t3)] hover:text-[var(--neon)] transition">
+              {isEs ? 'EN' : 'ES'}
+            </button>
+            <span className="text-sm text-[var(--t3)]">
+              {isEs ? 'Paso' : 'Step'} {step}/4
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* Progress bar */}
+      <div className="w-full h-0.5 bg-white/[0.04]">
+        <motion.div className="h-full" style={{ background: vertColor || '#14B8A6' }}
+          animate={{ width: `${(step / 4) * 100}%` }} transition={{ duration: 0.3 }} />
+      </div>
+
+      {/* Step indicators */}
+      <div className="max-w-5xl mx-auto px-6 pt-8 pb-4">
+        <div className="flex justify-between items-center">
+          {STEPS.map((s, idx) => (
+            <div key={s.id} className="flex items-center flex-1">
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-lg mb-1.5 transition-all duration-200"
+                  style={{
+                    background: s.id <= step ? vertColor || '#14B8A6' : 'rgba(255,255,255,0.04)',
+                    color: s.id <= step ? '#fff' : 'rgba(255,255,255,0.3)',
+                  }}
+                >
+                  {s.id < step ? '✓' : s.icon}
+                </div>
+                <span className="text-xs text-[var(--t3)] hidden sm:block text-center">
+                  {isEs ? s.es : s.en}
+                </span>
+              </div>
+              {idx < STEPS.length - 1 && (
+                <div className="h-0.5 flex-1 mx-3 rounded"
+                  style={{ background: s.id < step ? vertColor || '#14B8A6' : 'rgba(255,255,255,0.06)' }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Step content */}
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.25 }}
+          >
+            {step === 1 && <Step1 />}
+            {step === 2 && <Step2 />}
+            {step === 3 && <Step3 />}
+            {step === 4 && <Step4 />}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Navigation buttons */}
+        <div className="flex justify-between mt-12 pt-8 border-t border-white/[0.06]">
+          <button
+            onClick={() => step > 1 ? setStep(step - 1) : window.location.href = '/'}
+            className="px-6 py-3 rounded-xl border border-white/[0.08] text-[var(--t2)] hover:bg-white/[0.03] transition font-medium"
+          >
+            {step > 1 ? (isEs ? '← Anterior' : '← Back') : (isEs ? '← Inicio' : '← Home')}
+          </button>
+
+          {step < 4 ? (
+            <button
+              onClick={() => canNext() && setStep(step + 1)}
+              disabled={!canNext()}
+              className="px-8 py-3 rounded-xl font-semibold text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ background: canNext() ? (vertColor || '#14B8A6') : 'rgba(255,255,255,0.06)' }}
+            >
+              {isEs ? 'Siguiente →' : 'Next →'}
+            </button>
+          ) : (
+            <button
+              onClick={handleComplete}
+              className="px-8 py-3 rounded-xl font-bold text-white transition shadow-lg"
+              style={{ background: `linear-gradient(135deg, ${vertColor || '#14B8A6'}, ${vertColor || '#14B8A6'}cc)` }}
+            >
+              {isEs ? '🚀 Crear mi Hub' : '🚀 Create my Hub'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Footer link to DAFO */}
+      <div className="text-center pb-12">
+        <a href="/dafo" className="text-sm text-[var(--t3)] hover:text-[var(--neon)] transition underline underline-offset-4">
+          {isEs ? '¿Prefieres un diagnóstico DAFO primero?' : 'Prefer a SWOT analysis first?'}
+        </a>
+      </div>
     </div>
+  );
+}
+
+/* ─── Page Export (with LangProvider) ─── */
+export default function SetupPage() {
+  return (
+    <LangProvider>
+      <WizardInner />
+    </LangProvider>
   );
 }

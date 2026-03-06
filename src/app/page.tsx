@@ -1,684 +1,574 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import {
-  MapPin, Thermometer, Dna, Leaf, Eye, FileCheck, ClipboardList, Receipt,
-  Droplet, Radio, Droplets, BarChart3, Camera, Beef, PiggyBank, Warehouse,
-  XCircle, CheckCircle, ArrowRight, Award
-} from 'lucide-react';
+'use client';
 
-export default function LandingPage() {
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { LangProvider, useLang } from '@/config/LangContext';
+import dynamic from 'next/dynamic';
+import VerticalCard from '@/components/VerticalCard';
+
+const GeoTwinHero = dynamic(() => import('@/components/GeoTwinHero'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full rounded-2xl bg-[#090e16]" style={{ aspectRatio: '1.2/1', maxHeight: '500px' }} />
+  ),
+});
+
+function ScrollReveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { el.classList.add('visible'); obs.unobserve(el); } }, { threshold: 0.12 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
+}
+
+function AnimatedCounter({ end, suffix = '' }: { end: string; suffix?: string }) {
+  const [val, setVal] = useState('0');
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        const num = parseInt(end.replace(/[.,]/g, ''));
+        const dur = 1500;
+        const start = performance.now();
+        const tick = (now: number) => {
+          const p = Math.min((now - start) / dur, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          const current = Math.round(num * eased);
+          setVal(end.includes('.') ? current.toLocaleString('es-ES') : end.includes(',') ? current.toLocaleString('en-US') : current.toString());
+          if (p < 1) requestAnimationFrame(tick);
+          else setVal(end);
+        };
+        requestAnimationFrame(tick);
+        obs.unobserve(el);
+      }
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [end]);
+  return <span ref={ref} className="mono-data text-3xl lg:text-4xl font-bold">{val}{suffix}</span>;
+}
+
+/* ─── NAV ─── */
+function Navbar() {
+  const { lang, setLang, t } = useLang();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', h, { passive: true });
+    return () => window.removeEventListener('scroll', h);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[var(--warm-50)]" style={{ fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
-      {/* NAVBAR */}
-      <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-sm border-b border-[var(--warm-200)] z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-[var(--green-900)] flex items-center justify-center text-white font-bold text-xl">
-              N
-            </div>
-            <span className="text-xl font-semibold" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-              neofarm.io
-            </span>
-          </div>
-          
-          <div className="hidden md:flex items-center gap-8 font-medium text-[var(--text-600)]">
-            <Link href="#producto" className="hover:text-[var(--green-900)]">Producto</Link>
-            <Link href="#modulos" className="hover:text-[var(--green-900)]">Módulos</Link>
-            <Link href="#integraciones" className="hover:text-[var(--green-900)]">Integraciones</Link>
-            <Link href="#precios" className="hover:text-[var(--green-900)]">Precios</Link>
-            <Link href="#recursos" className="hover:text-[var(--green-900)]">Recursos</Link>
-          </div>
-          
-          <Link
-            href="/wizard"
-            className="px-6 py-2.5 bg-[var(--green-900)] text-white font-semibold rounded-lg hover:bg-[var(--green-700)] transition-colors"
-          >
-            Comenzar setup
-          </Link>
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'py-3 bg-[#070A0F]/80' : 'py-5 bg-transparent'}`}
+      style={{ backdropFilter: 'blur(40px)' }}>
+      <div className="section-container flex items-center justify-between">
+        <div className="flex items-center">
+          <span className="text-[22px] tracking-tight" style={{ fontFamily: 'var(--fb)' }}>
+            <span className="font-extrabold text-white">Neo</span>
+            <span className="font-light" style={{ color: 'var(--neon)' }}>Farm</span>
+          </span>
         </div>
-      </nav>
 
-      {/* Espaciado para navbar fixed */}
-      <div className="h-20"></div>
+        <div className="hidden md:flex items-center gap-8">
+          <a href="#platform" className="text-sm text-[var(--t2)] hover:text-[var(--t1)] transition-colors">{t('navPlatform')}</a>
+          <a href="#verticals" className="text-sm text-[var(--t2)] hover:text-[var(--t1)] transition-colors">{t('navVerticals')}</a>
+          <a href="#ecosystem" className="text-sm text-[var(--t2)] hover:text-[var(--t1)] transition-colors">{t('navDev')}</a>
 
-      {/* SECCIÓN 1: HERO */}
-      <section className="py-24 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <div className="inline-block px-4 py-1.5 bg-[var(--green-100)] text-[var(--green-700)] rounded-full text-sm font-medium mb-6">
-              IoT + IA + Trazabilidad
-            </div>
-            
-            <h1 className="text-5xl lg:text-6xl font-normal mb-6 text-[var(--green-900)]" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-              Transforma tu granja<br />
-              en un <span className="italic text-[var(--green-700)]">gemelo digital</span>
-            </h1>
-            
-            <p className="text-lg text-[var(--text-600)] mb-8 max-w-md leading-relaxed">
-              Monitoriza temperatura, gases, agua y comportamiento animal desde tu móvil. 
-              Sin obras. Sin cables. Operativo en 3 días.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 mb-12">
-              <Link
-                href="/wizard"
-                className="px-8 py-4 bg-[var(--green-900)] text-white font-semibold rounded-lg hover:bg-[var(--green-700)] transition-colors text-center"
-              >
-                Comenzar setup (3 min)
-              </Link>
-              <Link
-                href="/demo"
-                className="px-8 py-4 border-2 border-[var(--green-900)] text-[var(--green-900)] font-semibold rounded-lg hover:bg-[var(--green-50)] transition-colors text-center"
-              >
-                Ver demo en vivo
-              </Link>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-6">
-              <div>
-                <div className="text-3xl font-semibold mb-1" style={{ fontFamily: "'IBM Plex Mono', 'SF Mono', monospace" }}>
-                  500+
-                </div>
-                <div className="text-sm text-[var(--text-400)]">Granjas activas</div>
-              </div>
-              <div>
-                <div className="text-3xl font-semibold mb-1" style={{ fontFamily: "'IBM Plex Mono', 'SF Mono', monospace" }}>
-                  12k
-                </div>
-                <div className="text-sm text-[var(--text-400)]">Dispositivos IoT</div>
-              </div>
-              <div>
-                <div className="text-3xl font-semibold mb-1" style={{ fontFamily: "'IBM Plex Mono', 'SF Mono', monospace" }}>
-                  24M€
-                </div>
-                <div className="text-sm text-[var(--text-400)]">Facturado gestionado</div>
-              </div>
-            </div>
+          <div className="flex items-center gap-1 text-sm font-mono">
+            <button onClick={() => setLang('es')} className={`px-2 py-1 rounded transition-colors ${lang === 'es' ? 'text-[var(--t1)]' : 'text-[var(--t3)] hover:text-[var(--t2)]'}`}>ES</button>
+            <span className="text-[var(--t3)]">|</span>
+            <button onClick={() => setLang('en')} className={`px-2 py-1 rounded transition-colors ${lang === 'en' ? 'text-[var(--t1)]' : 'text-[var(--t3)] hover:text-[var(--t2)]'}`}>EN</button>
           </div>
-          
-          <div className="relative">
-            <Image
-              src="/images/hero-barn-v2.png"
-              alt="Digital Twin Barn"
-              width={800}
-              height={600}
-              className="w-full h-auto"
-              priority
-            />
-            
-            {/* Overlays de datos */}
-            <div className="absolute top-10 left-10 bg-white rounded-xl shadow-lg p-4 border border-gray-200">
-              <div className="text-sm text-[var(--text-400)] mb-2">Ganado Monitorizado</div>
-              <div className="text-2xl font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                1,247
-              </div>
-            </div>
-            
-            <div className="absolute top-32 right-8 bg-white rounded-xl shadow-lg p-4 border border-gray-200">
-              <div className="text-sm text-[var(--text-400)] mb-2">Dispositivos Activos</div>
-              <div className="text-2xl font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                48
-              </div>
-            </div>
-            
-            <div className="absolute bottom-20 left-16 bg-white rounded-xl shadow-lg p-4 border border-gray-200">
-              <div className="text-sm text-[var(--text-400)] mb-2">Carbono Capturado</div>
-              <div className="text-2xl font-semibold text-[var(--green-700)]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                342t CO₂
-              </div>
-            </div>
-          </div>
+
+          <a href="#cta" className="btn-neon text-sm !px-5 !py-2.5">{t('navDemo')}</a>
         </div>
-      </section>
+      </div>
+    </nav>
+  );
+}
 
-      {/* SECCIÓN 2: INTEGRACIONES */}
-      <section id="integraciones" className="py-16 px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-xs font-medium text-[var(--text-400)] tracking-widest uppercase mb-8 text-center">
-            INTEGRADO CON EL ECOSISTEMA GANADERO
+/* ─── HERO ─── */
+function Hero() {
+  const { t } = useLang();
+  return (
+    <section className="min-h-screen flex items-center pt-24 pb-16 relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #070A0F 0%, #0B1220 100%)' }}>
+      <div className="section-container grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center w-full">
+        <div>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-mono tracking-wider mb-8"
+            style={{ border: '1px solid rgba(20,184,166,.15)', color: 'var(--neon)' }}>
+            <span className="w-2 h-2 rounded-full bg-[var(--neon)] inline-block" style={{ boxShadow: '0 0 8px var(--neon)' }} />
+            {t('heroBadge')}
           </div>
-          
-          <div className="flex flex-wrap justify-center gap-6">
-            {['REGA', 'SITRAN', 'ECOGAN', 'LoRaWAN', 'Meshtastic', 'CTTNA', 'EAT'].map((logo) => (
-              <div
-                key={logo}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-[var(--green-500)] hover:text-[var(--green-700)] transition-colors"
-                style={{ fontFamily: "'IBM Plex Mono', monospace" }}
-              >
-                {logo}
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.1] mb-6">
+            {t('heroTitle')}{' '}
+            <em className="italic" style={{ color: 'var(--neon)' }}>{t('heroTitleEm')}</em>
+          </h1>
+
+          <p className="text-lg text-[var(--t2)] mb-10 max-w-xl leading-relaxed">{t('heroSub')}</p>
+
+          <div className="flex flex-col sm:flex-row gap-4 mb-14">
+            <a href="#cta" className="btn-neon text-center">{t('ctaDemo')}</a>
+            <a href="#platform" className="btn-ghost text-center">{t('ctaDocs')}</a>
+          </div>
+
+          <div className="flex flex-wrap gap-8">
+            {[['metric1val', 'metric1label'], ['metric2val', 'metric2label'], ['metric3val', 'metric3label']].map(([vk, lk]) => (
+              <div key={vk}>
+                <AnimatedCounter end={t(vk)} />
+                <div className="text-xs text-[var(--t3)] mt-1 font-mono tracking-wide uppercase">{t(lk)}</div>
               </div>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* SECCIÓN 3: ANTES vs DESPUÉS */}
-      <section className="py-28 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl lg:text-5xl font-normal text-center mb-16" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-            De 5 apps que no se hablan<br />
-            a una plataforma integrada
-          </h2>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* ANTES */}
-            <div className="bg-[var(--warm-100)] rounded-2xl p-8 border-l-4 border-[var(--accent)]">
-              <div className="flex items-center gap-3 mb-6">
-                <XCircle className="w-8 h-8 text-[var(--accent)]" />
-                <h3 className="text-2xl font-bold text-[var(--accent)]">Antes</h3>
-              </div>
-              
-              <ul className="space-y-4 text-[var(--text-600)]">
-                <li className="flex gap-3">
-                  <span className="text-[var(--accent)] mt-1">•</span>
-                  <span>Excel para el censo — errores, datos perdidos, sin histórico</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--accent)] mt-1">•</span>
-                  <span>Papel para trazabilidad — horas buscando documentos en inspecciones</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--accent)] mt-1">•</span>
-                  <span>WhatsApp para alertas — se pierden entre memes y audios</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--accent)] mt-1">•</span>
-                  <span>Calculadora para genética — sin predicción, sin datos reales</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--accent)] mt-1">•</span>
-                  <span>Notas de papel en el campo — ilegibles, se mojan, se pierden</span>
-                </li>
-              </ul>
+        <div className="relative">
+          <GeoTwinHero />
+
+          {/* ── CSS IoT Data Nodes (overlay on top of Canvas) ── */}
+          <div className="absolute inset-0 pointer-events-none hidden lg:block">
+            {/* Status bar */}
+            <div className="twin-status" style={{ top: 16, left: 16 }}>
+              <span className="status-dot ok" />
+              <span className="status-text">LIVE · 12 IoT Nodes · 30s refresh</span>
             </div>
-            
-            {/* CON NEOFARM */}
-            <div className="bg-[var(--green-50)] rounded-2xl p-8 border-l-4 border-[var(--green-700)]">
-              <div className="flex items-center gap-3 mb-6">
-                <CheckCircle className="w-8 h-8 text-[var(--green-700)]" />
-                <h3 className="text-2xl font-bold text-[var(--green-700)]">Con NeoFarm</h3>
+
+            {/* TEMP */}
+            <div className="dn" style={{ top: '15%', left: '8%' }}>
+              <div className="dn-icon" style={{ background: 'rgba(20,184,166,.15)', color: '#14B8A6' }}>🌡</div>
+              <div className="dn-data">
+                <div className="dn-label">TEMP</div>
+                <div className="dn-value">23.4°C</div>
               </div>
-              
-              <ul className="space-y-4 text-[var(--text-600)]">
-                <li className="flex gap-3">
-                  <span className="text-[var(--green-700)] mt-1">•</span>
-                  <span>Todo en tiempo real — un vistazo en el móvil y sabes cómo va la granja</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--green-700)] mt-1">•</span>
-                  <span>Trazabilidad automática — ICA, SITRAN, REMO con un click</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--green-700)] mt-1">•</span>
-                  <span>Alertas inteligentes — solo cuando importa, con datos, no con ruido</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--green-700)] mt-1">•</span>
-                  <span>Genética científica — predicción de heterosis, EPDs, cruces óptimos</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-[var(--green-700)] mt-1">•</span>
-                  <span>App móvil offline — funciona en el campo sin cobertura</span>
-                </li>
-              </ul>
+              <div className="dn-trend up">↗ +0.8</div>
+            </div>
+
+            {/* NDVI */}
+            <div className="dn" style={{ top: '8%', right: '15%' }}>
+              <div className="dn-icon" style={{ background: 'rgba(22,163,74,.15)', color: '#16A34A' }}>🌿</div>
+              <div className="dn-data">
+                <div className="dn-label">NDVI</div>
+                <div className="dn-value" style={{ color: '#14B8A6' }}>0.72</div>
+              </div>
+            </div>
+
+            {/* HEAD */}
+            <div className="dn" style={{ bottom: '28%', left: '5%' }}>
+              <div className="dn-icon" style={{ background: 'rgba(255,184,77,.15)', color: '#FFB84D' }}>🐄</div>
+              <div className="dn-data">
+                <div className="dn-label">HEAD</div>
+                <div className="dn-value">847</div>
+              </div>
+              <div className="dn-trend up">↗ +12</div>
+            </div>
+
+            {/* CO₂ */}
+            <div className="dn" style={{ bottom: '18%', right: '8%' }}>
+              <div className="dn-icon" style={{ background: 'rgba(139,115,85,.15)', color: '#8B7355' }}>💨</div>
+              <div className="dn-data">
+                <div className="dn-label">CO₂</div>
+                <div className="dn-value">412<small>ppm</small></div>
+              </div>
+            </div>
+
+            {/* WATER */}
+            <div className="dn" style={{ top: '42%', right: '3%' }}>
+              <div className="dn-icon" style={{ background: 'rgba(8,145,178,.15)', color: '#0891B2' }}>💧</div>
+              <div className="dn-data">
+                <div className="dn-label">WATER</div>
+                <div className="dn-value">2.4<small>m³/d</small></div>
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* SECCIÓN 4: INFRAESTRUCTURA INTELIGENTE */}
-      <section className="py-28 px-6 bg-white">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <div className="inline-block px-4 py-1.5 bg-[var(--green-100)] text-[var(--green-700)] rounded-full text-sm font-medium mb-6">
-              INFRAESTRUCTURA INTELIGENTE
-            </div>
-            
-            <h2 className="text-4xl font-normal mb-6 text-[var(--green-900)] max-w-lg" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-              Sensores, visión IA y conectividad <span className="italic">mesh</span> en tiempo real
-            </h2>
-            
-            <p className="text-lg text-[var(--text-600)] mb-10 max-w-lg leading-relaxed">
-              Cada nave se convierte en un organismo monitorizado. Temperatura, humedad, gases, 
-              consumo de agua y comportamiento animal — todo capturado, todo analizado, todo en tu bolsillo.
-            </p>
-            
-            <div className="space-y-6">
-              {[
-                { icon: Thermometer, title: 'Sensores ambientales', desc: 'T°, HR, NH₃, CO₂ a altura animal. Alertas automáticas.' },
-                { icon: Eye, title: 'Visión IA', desc: 'Conteo, caudofagia, cojeras, actividad grupal, animal caído.' },
-                { icon: Radio, title: 'Red mesh Meshtastic', desc: 'Cobertura indoor/outdoor sin SIM. Bridges LoRa cada 30m.' },
-                { icon: Droplets, title: 'Caudalímetro de agua', desc: 'Consumo por nave = indicador precoz de enfermedad.' },
-              ].map((feature, idx) => (
-                <div key={idx} className="flex gap-4">
-                  <feature.icon className="w-8 h-8 text-[var(--green-700)] flex-shrink-0 mt-1" />
+      {/* Gradient fade at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0B1220] to-transparent" />
+    </section>
+  );
+}
+
+/* ─── PROBLEM ─── */
+function ProblemSection() {
+  const { t } = useLang();
+  const cards = [
+    { key: '1', icon: '📊' },
+    { key: '2', icon: '🔌' },
+    { key: '3', icon: '📋' },
+  ];
+  return (
+    <section className="py-24 lg:py-32" style={{ background: 'var(--bg2)' }}>
+      <div className="section-container">
+        <ScrollReveal className="text-center mb-16">
+          <h2 className="text-3xl lg:text-5xl mb-4">{t('problemTitle')}</h2>
+          <p className="text-[var(--t2)] max-w-2xl mx-auto text-lg">{t('problemSub')}</p>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {cards.map((c, i) => (
+            <ScrollReveal key={c.key}>
+              <div className="glass-card-hover p-8 h-full" style={{ animationDelay: `${i * 0.15}s` }}>
+                <div className="text-4xl mb-5">{c.icon}</div>
+                <h3 className="text-xl font-semibold mb-3 font-body">{t(`problem${c.key}Title`)}</h3>
+                <p className="text-[var(--t2)] leading-relaxed">{t(`problem${c.key}Desc`)}</p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── PLATFORM LAYERS ─── */
+function PlatformSection() {
+  const { t } = useLang();
+  const [active, setActive] = useState<number | null>(null);
+  const layers = [
+    { n: 4, color: 'var(--neon)', opacity: 1 },
+    { n: 3, color: 'var(--cyan)', opacity: 0.85 },
+    { n: 2, color: 'var(--amber)', opacity: 0.7 },
+    { n: 1, color: 'var(--violet)', opacity: 0.55 },
+  ];
+  return (
+    <section id="platform" className="py-24 lg:py-32" style={{ background: 'linear-gradient(180deg, var(--bg2), var(--bg3))' }}>
+      <div className="section-container">
+        <ScrollReveal className="text-center mb-16">
+          <h2 className="text-3xl lg:text-5xl mb-4">{t('platformTitle')}</h2>
+          <p className="text-[var(--t2)] max-w-2xl mx-auto text-lg">{t('platformSub')}</p>
+        </ScrollReveal>
+        <div className="max-w-3xl mx-auto space-y-3">
+          {layers.map((l, i) => (
+            <ScrollReveal key={l.n}>
+              <div
+                className="glass-card p-6 cursor-pointer transition-all duration-300"
+                style={{
+                  borderColor: active === l.n ? l.color : 'rgba(255,255,255,.05)',
+                  boxShadow: active === l.n ? `0 0 30px ${l.color}20` : 'none',
+                  opacity: l.opacity,
+                }}
+                onMouseEnter={() => setActive(l.n)}
+                onMouseLeave={() => setActive(null)}
+              >
+                <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold text-[var(--text-900)] mb-1">{feature.title}</div>
-                    <div className="text-[var(--text-400)]">{feature.desc}</div>
+                    <div className="font-mono text-xs tracking-widest mb-1" style={{ color: l.color }}>{t(`layer${l.n}Title`)}</div>
+                    <div className="text-sm text-[var(--t2)]">{t(`layer${l.n}Desc`)}</div>
+                  </div>
+                  <div className="w-2 h-2 rounded-full" style={{ background: l.color, boxShadow: `0 0 6px ${l.color}` }} />
+                </div>
+                {active === l.n && (
+                  <p className="mt-4 text-sm text-[var(--t2)] leading-relaxed border-t border-white/5 pt-4">
+                    {t(`layer${l.n}Detail`)}
+                  </p>
+                )}
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── DIGITAL TWIN ─── */
+function DigitalTwinSection() {
+  const { t } = useLang();
+  const items = [
+    { key: '1', icon: '🏗️', color: 'var(--neon)' },
+    { key: '2', icon: '📈', color: 'var(--cyan)' },
+    { key: '3', icon: '🌡️', color: 'var(--amber)' },
+    { key: '4', icon: '💰', color: 'var(--violet)' },
+    { key: '5', icon: '📊', color: 'var(--rose)' },
+    { key: '6', icon: '🌱', color: 'var(--neon2)' },
+  ];
+  return (
+    <section className="py-24 lg:py-32" style={{ background: 'var(--bg3)' }}>
+      <div className="section-container">
+        <ScrollReveal className="text-center mb-16">
+          <h2 className="text-3xl lg:text-5xl mb-4">{t('dtTitle')}</h2>
+          <p className="text-[var(--t2)] max-w-2xl mx-auto text-lg">{t('dtSub')}</p>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {items.map((it, i) => (
+            <ScrollReveal key={it.key}>
+              <div className="glass-card-hover p-7 h-full group">
+                <div className="text-3xl mb-4">{it.icon}</div>
+                <h3 className="text-lg font-semibold mb-2 font-body group-hover:text-[var(--neon)] transition-colors">{t(`dt${it.key}Title`)}</h3>
+                <p className="text-sm text-[var(--t2)] leading-relaxed">{t(`dt${it.key}Desc`)}</p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── ROI SIMULATOR ─── */
+function ROISimulator() {
+  const { t } = useLang();
+  const [heads, setHeads] = useState(500);
+  const [ha, setHa] = useState(100);
+  const [type, setType] = useState('vacuno');
+
+  const mult = type === 'vacuno' ? 1 : type === 'porcino' ? 1.4 : 0.9;
+  const savings = Math.round((heads * 18 + ha * 42) * mult);
+  const roi = Math.round((savings * 3) / (heads * 2.5 + 1200) * 100);
+  const payback = Math.round((heads * 2.5 + 1200) / (savings / 12));
+
+  return (
+    <section className="py-24 lg:py-32" style={{ background: 'linear-gradient(180deg, var(--bg3), var(--bg4))' }}>
+      <div className="section-container">
+        <ScrollReveal className="text-center mb-16">
+          <h2 className="text-3xl lg:text-5xl mb-4">{t('roiTitle')}</h2>
+          <p className="text-[var(--t2)] max-w-2xl mx-auto text-lg">{t('roiSub')}</p>
+        </ScrollReveal>
+        <ScrollReveal>
+          <div className="glass-card max-w-2xl mx-auto p-8 lg:p-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="text-xs font-mono text-[var(--t3)] uppercase tracking-wider mb-2 block">{t('roiHeads')}</label>
+                <input type="range" min={50} max={5000} step={50} value={heads} onChange={e => setHeads(+e.target.value)}
+                  className="w-full accent-[var(--neon)]" />
+                <div className="mono-data text-lg mt-1">{heads.toLocaleString()}</div>
+              </div>
+              <div>
+                <label className="text-xs font-mono text-[var(--t3)] uppercase tracking-wider mb-2 block">{t('roiHectares')}</label>
+                <input type="range" min={10} max={2000} step={10} value={ha} onChange={e => setHa(+e.target.value)}
+                  className="w-full accent-[var(--neon)]" />
+                <div className="mono-data text-lg mt-1">{ha.toLocaleString()}</div>
+              </div>
+            </div>
+            <div className="mb-8">
+              <label className="text-xs font-mono text-[var(--t3)] uppercase tracking-wider mb-3 block">{t('roiType')}</label>
+              <div className="flex gap-3">
+                {[['vacuno', 'roiTypeVacuno'], ['porcino', 'roiTypePorcino'], ['avi', 'roiTypeAvi']].map(([v, k]) => (
+                  <button key={v} onClick={() => setType(v)}
+                    className={`px-4 py-2 rounded-lg text-sm font-mono transition-all ${type === v ? 'bg-[var(--neon)]/10 text-[var(--neon)] border border-[var(--neon)]/30' : 'text-[var(--t3)] border border-white/5 hover:border-white/10'}`}>
+                    {t(k)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/5">
+              <div className="text-center">
+                <div className="mono-data text-2xl lg:text-3xl font-bold">{roi}%</div>
+                <div className="text-xs text-[var(--t3)] mt-1">{t('roiResult')}</div>
+              </div>
+              <div className="text-center">
+                <div className="mono-data text-2xl lg:text-3xl font-bold">{savings.toLocaleString()}€</div>
+                <div className="text-xs text-[var(--t3)] mt-1">{t('roiSavings')}</div>
+              </div>
+              <div className="text-center">
+                <div className="mono-data text-2xl lg:text-3xl font-bold">{payback}</div>
+                <div className="text-xs text-[var(--t3)] mt-1">{t('roiPayback')} ({t('roiMonths')})</div>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      </div>
+    </section>
+  );
+}
+
+/* ─── VERTICALS ─── */
+function VerticalsSection() {
+  const { t } = useLang();
+  const verts = [
+    { key: 'vacas', color: 'var(--vacas)', rawColor: '#3D7A5F', url: 'https://hub.vacasdata.com/dashboard' },
+    { key: 'porc', color: 'var(--porc)', rawColor: '#3B6B82', url: 'https://hub.porcdata.com/dashboard' },
+    { key: 'ovo', color: 'var(--ovo)', rawColor: '#B07D2B', url: 'https://hub.ovosfera.com/dashboard' },
+  ];
+  return (
+    <section id="verticals" className="py-24 lg:py-32" style={{ background: 'var(--bg4)' }}>
+      <div className="section-container">
+        <ScrollReveal className="text-center mb-16">
+          <h2 className="text-3xl lg:text-5xl mb-4">{t('vertTitle')}</h2>
+          <p className="text-[var(--t2)] max-w-2xl mx-auto text-lg">{t('vertSub')}</p>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {verts.map((v) => (
+            <ScrollReveal key={v.key}>
+              <VerticalCard
+                vertKey={v.key}
+                color={v.rawColor}
+                url={v.url}
+                title={t(`${v.key}Title`)}
+                desc={t(`${v.key}Desc`)}
+                cta={t(`${v.key}Cta`)}
+              />
+            </ScrollReveal>
+          ))}
+        </div>
+        <div className="text-center">
+          <span className="text-xs font-mono text-[var(--t3)] tracking-widest uppercase">── {t('vertPowered')} ──</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── ECOSYSTEM ─── */
+function EcosystemSection() {
+  const { t } = useLang();
+  const items = [
+    { key: '1', icon: '{ }', color: 'var(--neon)' },
+    { key: '2', icon: '✓', color: 'var(--cyan)' },
+    { key: '3', icon: '⚡', color: 'var(--amber)' },
+  ];
+  return (
+    <section id="ecosystem" className="py-24 lg:py-32" style={{ background: 'linear-gradient(180deg, var(--bg4), var(--bg3))' }}>
+      <div className="section-container">
+        <ScrollReveal className="text-center mb-16">
+          <h2 className="text-3xl lg:text-5xl mb-4">{t('ecoTitle')}</h2>
+          <p className="text-[var(--t2)] max-w-2xl mx-auto text-lg">{t('ecoSub')}</p>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {items.map((it) => (
+            <ScrollReveal key={it.key}>
+              <div className="glass-card-hover p-8 h-full">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-mono font-bold mb-5"
+                  style={{ background: `${it.color}15`, color: it.color }}>{it.icon}</div>
+                <h3 className="text-xl font-semibold mb-3 font-body">{t(`eco${it.key}Title`)}</h3>
+                <p className="text-sm text-[var(--t2)] leading-relaxed">{t(`eco${it.key}Desc`)}</p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── COMPLIANCE ─── */
+function ComplianceSection() {
+  const { t } = useLang();
+  const regs = ['1', '2', '3', '4', '5'];
+  return (
+    <section className="py-24 lg:py-32" style={{ background: 'var(--bg3)' }}>
+      <div className="section-container">
+        <ScrollReveal className="text-center mb-16">
+          <h2 className="text-3xl lg:text-5xl mb-4">{t('compTitle')}</h2>
+          <p className="text-[var(--t2)] max-w-2xl mx-auto text-lg">{t('compSub')}</p>
+        </ScrollReveal>
+        <ScrollReveal>
+          <div className="glass-card max-w-3xl mx-auto p-8 lg:p-10">
+            <div className="space-y-6">
+              {regs.map((r) => (
+                <div key={r} className="flex items-start gap-4 group">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: 'rgba(20,184,166,.1)' }}>
+                    <span className="text-[var(--neon)] text-sm">✓</span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-[var(--t1)] mb-1 font-body">{t(`comp${r}Title`)}</div>
+                    <div className="text-sm text-[var(--t2)]">{t(`comp${r}Desc`)}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          
-          <div className="relative h-[500px]">
-            <Image
-              src="/images/hero-barn-v2.png"
-              alt="IoT Infrastructure"
-              fill
-              className="object-contain"
-            />
-          </div>
-        </div>
-      </section>
+        </ScrollReveal>
+      </div>
+    </section>
+  );
+}
 
-      {/* SECCIÓN 5: MÓDULOS CONECTADOS */}
-      <section id="modulos" className="py-28 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="inline-block px-4 py-1.5 bg-[var(--green-100)] text-[var(--green-700)] rounded-full text-sm font-medium mb-6 mx-auto block w-fit">
-            MÓDULOS CONECTADOS
-          </div>
-          
-          <h2 className="text-4xl lg:text-5xl font-normal text-center mb-4" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-            Todo lo que necesitas para gestionar tu granja
-          </h2>
-          
-          <p className="text-lg text-[var(--text-600)] text-center mb-16 max-w-2xl mx-auto">
-            Activa solo los módulos que uses. Desactiva lo que no necesites. Sin coste oculto.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: MapPin, title: 'IoT GPS LoRa', desc: 'Localización real de tu ganado en extensivo. Rango 15km sin cobertura.', badge: 'EXTENSIVO', badgeColor: 'green' },
-              { icon: Thermometer, title: 'IoT Barn', desc: 'Sensores T°, NH₃, CO₂, humedad en naves. Alertas automáticas.', badge: 'INTENSIVO', badgeColor: 'orange' },
-              { icon: Dna, title: 'Genética Avanzada', desc: 'EPDs, consanguinidad, predictor F1. FarmMatch™ para cruces óptimos.' },
-              { icon: Leaf, title: 'Carbono MRV', desc: 'Calcula créditos de carbono con satélite NDVI y biomasa acreditada.' },
-              { icon: Eye, title: 'IA Vision', desc: 'Cámaras con ML: detección de cojeras, caudofagia, alertas comportamentales.', badge: 'INTENSIVO', badgeColor: 'orange' },
-              { icon: FileCheck, title: 'Trazabilidad Oficial', desc: 'REGA, SITRAN, ICA, retorno matadero. Todo digital, cero papel.' },
-              { icon: ClipboardList, title: 'SIGE Digital', desc: '11 planes del RD 306/2020 en un dashboard. Inspecciones con 1 click.', badge: 'INTENSIVO', badgeColor: 'orange' },
-              { icon: Receipt, title: 'ERP Ganadero', desc: 'Ventas, compras, inventario, RRHH, Modelo 303. Contabilidad integrada.' },
-              { icon: Droplet, title: 'SmartPurín', desc: 'Gestión de fosa + biogás + planes de abonado. Cumplimiento RD 1051.', badge: 'INTENSIVO', badgeColor: 'orange' },
-              { icon: Award, title: 'Subvenciones', desc: 'Calcula ayudas PAC, PERTE Agroalimentario y ayudas autonómicas. Genera solicitudes.' },
-            ].map((module, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-xl p-6 border border-gray-200 hover:border-[var(--green-500)] hover:shadow-md transition-all group"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <module.icon className="w-8 h-8 text-[var(--green-700)]" />
-                  {module.badge && (
-                    <span className={`text-xs px-2 py-1 rounded ${module.badgeColor === 'green' ? 'bg-[var(--green-100)] text-[var(--green-700)]' : 'bg-orange-100 text-orange-700'}`}>
-                      {module.badge}
-                    </span>
-                  )}
-                </div>
-                <h3 className="font-semibold text-[var(--text-900)] mb-2">{module.title}</h3>
-                <p className="text-sm text-[var(--text-400)] leading-relaxed">{module.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECCIÓN 6: FARMMATCH */}
-      <section className="py-28 px-6 bg-white">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <div className="inline-block px-4 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium mb-6">
-              NUEVO
-            </div>
-            
-            <h2 className="text-5xl font-normal mb-4" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-              FarmMatch™
-            </h2>
-            
-            <p className="text-xl text-[var(--text-600)] mb-8 leading-relaxed">
-              El Tinder de la genética ganadera. Desliza, compara y encuentra el cruce perfecto para tu rebaño.
-            </p>
-            
-            <ul className="space-y-4 mb-8">
-              {[
-                { icon: Dna, text: 'Compatibilidad genética calculada al instante' },
-                { icon: BarChart3, text: 'Predicción de heterosis, consanguinidad y EPDs' },
-                { icon: Camera, text: 'Fotos reales de los candidatos' },
-                { icon: Beef, text: 'Vacuno: carne, leche y cruces' },
-                { icon: PiggyBank, text: 'Porcino: líneas maternas × paternas' },
-              ].map((feature, idx) => (
-                <li key={idx} className="flex gap-3 items-start">
-                  <feature.icon className="w-5 h-5 text-[var(--green-700)] flex-shrink-0 mt-1" />
-                  <span className="text-[var(--text-600)]">{feature.text}</span>
-                </li>
-              ))}
-            </ul>
-            
-            <Link
-              href="/genetics"
-              className="inline-block px-8 py-4 bg-[var(--accent)] text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Probar FarmMatch™
-            </Link>
-          </div>
-          
-          <div className="bg-white rounded-2xl border-2 border-[var(--green-500)] p-8 shadow-xl">
-            <div className="aspect-square bg-gray-100 rounded-xl mb-6 flex items-center justify-center text-gray-400">
-              <Beef className="w-24 h-24" />
-            </div>
-            
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-[var(--text-400)]">Compatibilidad genética</span>
-                <span className="text-2xl font-semibold text-[var(--green-700)]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                  92%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-[var(--green-500)] h-2 rounded-full" style={{ width: '92%' }}></div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-sm text-[var(--text-400)] mb-1">Heterosis</div>
-                <div className="font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>+18%</div>
-              </div>
-              <div>
-                <div className="text-sm text-[var(--text-400)] mb-1">Consang.</div>
-                <div className="font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>2.1%</div>
-              </div>
-              <div>
-                <div className="text-sm text-[var(--text-400)] mb-1">EPD</div>
-                <div className="font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>+3.2</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECCIÓN 7: PRUEBA LA PLATAFORMA */}
-      <section className="py-28 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl lg:text-5xl font-normal text-center mb-4" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-            Prueba la plataforma ahora
-          </h2>
-          
-          <p className="text-lg text-[var(--text-600)] text-center mb-16">
-            Elige tu tipo de explotación y explora la demo interactiva.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Link
-              href="/demo?type=extensivo"
-              className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-[var(--green-500)] hover:shadow-lg transition-all group"
-            >
-              <MapPin className="w-12 h-12 text-[var(--green-700)] mb-6" />
-              <h3 className="text-2xl font-bold mb-2">Vacuno Extensivo</h3>
-              <p className="text-[var(--text-400)] mb-6">Sierras, dehesas, GPS, carbono</p>
-              <div className="flex items-center text-[var(--green-700)] font-semibold group-hover:gap-3 transition-all">
-                Explorar <ArrowRight className="w-5 h-5 ml-2" />
-              </div>
-            </Link>
-            
-            <Link
-              href="/demo?type=intensivo"
-              className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-[var(--accent)] hover:shadow-lg transition-all group"
-            >
-              <Warehouse className="w-12 h-12 text-[var(--accent)] mb-6" />
-              <h3 className="text-2xl font-bold mb-2">Porcino Intensivo</h3>
-              <p className="text-[var(--text-400)] mb-6">Naves, sensores, IA, purines</p>
-              <div className="flex items-center text-[var(--accent)] font-semibold group-hover:gap-3 transition-all">
-                Explorar <ArrowRight className="w-5 h-5 ml-2" />
-              </div>
-            </Link>
-            
-            <Link
-              href="https://hub.vacasdata.com/dafo"
-              className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-500 hover:shadow-lg transition-all group"
-            >
-              <BarChart3 className="w-12 h-12 text-purple-600 mb-6" />
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-2xl font-bold">DAFO Inteligente</h3>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded uppercase">IA</span>
-              </div>
-              <p className="text-[var(--text-400)] mb-6">Diagnóstico completo con Claude IA</p>
-              <div className="flex items-center text-purple-600 font-semibold group-hover:gap-3 transition-all">
-                Analizar mi granja <ArrowRight className="w-5 h-5 ml-2" />
-              </div>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* SECCIÓN 8: PRICING */}
-      <section id="precios" className="py-28 px-6 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="inline-block px-4 py-1.5 bg-[var(--green-100)] text-[var(--green-700)] rounded-full text-sm font-medium mb-6 mx-auto block w-fit">
-            PRECIOS
-          </div>
-          
-          <h2 className="text-4xl lg:text-5xl font-normal text-center mb-4" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-            Planes que escalan contigo
-          </h2>
-          
-          <p className="text-lg text-[var(--text-600)] text-center mb-16">
-            Paga solo por lo que uses. Sin permanencia. Cancela cuando quieras.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* STARTER */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200">
-              <div className="text-sm font-medium text-[var(--text-400)] uppercase mb-2">Starter</div>
-              <div className="mb-6">
-                <span className="text-5xl font-bold">49€</span>
-                <span className="text-[var(--text-400)]">/mes</span>
-              </div>
-              <p className="text-[var(--text-600)] mb-6">Para granjas que empiezan a digitalizar</p>
-              <ul className="space-y-3 mb-8">
-                {['Hasta 500 animales', '5 sensores incluidos', 'Dashboard básico', 'Trazabilidad REGA/SITRAN', 'Soporte email'].map((item, idx) => (
-                  <li key={idx} className="flex gap-2">
-                    <CheckCircle className="w-5 h-5 text-[var(--green-500)] flex-shrink-0" />
-                    <span className="text-sm">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/wizard"
-                className="block w-full py-3 border-2 border-[var(--green-900)] text-[var(--green-900)] font-semibold rounded-lg hover:bg-[var(--green-50)] transition-colors text-center"
-              >
-                Empieza gratis 30 días
-              </Link>
-            </div>
-            
-            {/* PRO */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-[var(--green-500)] relative shadow-lg">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-[var(--green-500)] text-white text-sm font-semibold rounded-full">
-                POPULAR
-              </div>
-              <div className="text-sm font-medium text-[var(--green-700)] uppercase mb-2">Pro</div>
-              <div className="mb-6">
-                <span className="text-5xl font-bold">99€</span>
-                <span className="text-[var(--text-400)]">/mes</span>
-              </div>
-              <p className="text-[var(--text-600)] mb-6">Para granjas que quieren control total</p>
-              <ul className="space-y-3 mb-8">
-                {['Hasta 3.000 animales', 'Sensores ilimitados', 'IA Vision (2 cámaras)', 'Todos los módulos', 'FarmMatch™', 'SmartPurín', 'Soporte prioritario'].map((item, idx) => (
-                  <li key={idx} className="flex gap-2">
-                    <CheckCircle className="w-5 h-5 text-[var(--green-500)] flex-shrink-0" />
-                    <span className="text-sm">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/wizard"
-                className="block w-full py-3 bg-[var(--green-900)] text-white font-semibold rounded-lg hover:bg-[var(--green-700)] transition-colors text-center"
-              >
-                Comenzar con Pro
-              </Link>
-            </div>
-            
-            {/* ENTERPRISE */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200">
-              <div className="text-sm font-medium text-[var(--text-400)] uppercase mb-2">Enterprise</div>
-              <div className="mb-6">
-                <span className="text-5xl font-bold">199€</span>
-                <span className="text-[var(--text-400)]">/mes</span>
-              </div>
-              <p className="text-[var(--text-600)] mb-6">Para integradoras y grandes explotaciones</p>
-              <ul className="space-y-3 mb-8">
-                {['Animales ilimitados', 'Multi-granja', 'API completa', 'Nutrición IA Precisión', 'Pool compra colectiva', 'Gestor dedicado', 'SLA 99.9%'].map((item, idx) => (
-                  <li key={idx} className="flex gap-2">
-                    <CheckCircle className="w-5 h-5 text-[var(--green-500)] flex-shrink-0" />
-                    <span className="text-sm">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/contact"
-                className="block w-full py-3 border-2 border-[var(--green-900)] text-[var(--green-900)] font-semibold rounded-lg hover:bg-[var(--green-50)] transition-colors text-center"
-              >
-                Contactar ventas
-              </Link>
-            </div>
-          </div>
-          
-          <p className="text-sm text-[var(--text-400)] text-center mt-8">
-            Precios sin IVA. 20% descuento anual. Subvencionable PERTE Agroalimentario + PAC.
-          </p>
-        </div>
-      </section>
-
-      {/* SECCIÓN 9: FAQ */}
-      <section className="py-28 px-6">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl lg:text-5xl font-normal text-center mb-16" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-            Preguntas frecuentes
-          </h2>
-          
-          <div className="space-y-6">
-            {[
-              {
-                q: '¿Necesito instalar hardware especial?',
-                a: 'No. Nuestros sensores son inalámbricos, con batería de 2 años y se instalan en 30 minutos sin obras. El gateway se conecta a tu WiFi o usa 4G propio.'
-              },
-              {
-                q: '¿Funciona sin internet en el campo?',
-                a: 'Sí. La app funciona 100% offline. Sincroniza automáticamente cuando recuperas cobertura. Los sensores usan red mesh propia que no depende de internet.'
-              },
-              {
-                q: '¿Puedo probar antes de pagar?',
-                a: '30 días gratis con todas las funciones. Sin tarjeta. Si no te convence, no pagas nada.'
-              },
-              {
-                q: '¿Es compatible con mi software actual?',
-                a: 'NeoFarm se integra con REGA, SITRAN, ECOGAN y los principales software ganaderos. También exporta a Excel, PDF y tiene API abierta.'
-              },
-              {
-                q: '¿Cómo funciona FarmMatch™?',
-                a: 'Introduces los datos de tu rebaño y FarmMatch busca en nuestra base de datos de sementales y hembras. Calcula compatibilidad genética, predicción de heterosis y te muestra candidatos con fotos reales y EPDs verificados.'
-              },
-            ].map((faq, idx) => (
-              <details key={idx} className="group border-b border-gray-200 pb-6">
-                <summary className="flex justify-between items-center font-semibold text-lg cursor-pointer hover:text-[var(--green-700)]">
-                  {faq.q}
-                  <span className="ml-4 flex-shrink-0">+</span>
-                </summary>
-                <p className="mt-4 text-[var(--text-600)] leading-relaxed">{faq.a}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECCIÓN 10: CTA FINAL */}
-      <section className="py-28 px-6 bg-gradient-to-br from-[var(--green-900)] to-[var(--green-700)] text-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-block px-4 py-1.5 bg-white/20 rounded-full text-sm font-medium mb-6">
-            EMPIEZA HOY
-          </div>
-          
-          <h2 className="text-4xl lg:text-5xl font-normal mb-6" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-            Setup en 3 minutos. Sin tarjeta.
-          </h2>
-          
-          <p className="text-xl mb-8 opacity-90 leading-relaxed">
-            Paga tu primera factura solo si te merece la pena.<br />
-            Y te aseguramos que te va a merecer la pena.
-          </p>
-          
+/* ─── CTA ─── */
+function CTASection() {
+  const { t } = useLang();
+  return (
+    <section id="cta" className="py-24 lg:py-32 relative overflow-hidden">
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(20,184,166,.06) 0%, transparent 70%)' }} />
+      <div className="section-container relative z-10 text-center">
+        <ScrollReveal>
+          <h2 className="text-3xl lg:text-5xl mb-6 max-w-3xl mx-auto">{t('ctaTitle')}</h2>
+          <p className="text-lg text-[var(--t2)] mb-10 max-w-xl mx-auto">{t('ctaSub')}</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/wizard"
-              className="px-8 py-4 bg-white text-[var(--green-900)] font-semibold rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              Comenzar setup (3 min)
-            </Link>
-            <Link
-              href="/demo"
-              className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors"
-            >
-              Ver demo en vivo
-            </Link>
+            <a href="/setup" className="btn-neon text-center">{t('ctaBtn1')}</a>
+            <a href="mailto:hello@neofarm.io" className="btn-ghost text-center">{t('ctaBtn2')}</a>
           </div>
-        </div>
-      </section>
+        </ScrollReveal>
+      </div>
+    </section>
+  );
+}
 
-      {/* FOOTER */}
-      <footer className="bg-[var(--text-900)] text-gray-400 py-16 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+/* ─── FOOTER ─── */
+function Footer() {
+  const { t } = useLang();
+  return (
+    <footer className="pt-16 pb-8 border-t border-white/5" style={{ background: 'var(--bg)' }}>
+      <div className="section-container">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[var(--green-500)] flex items-center justify-center text-white font-bold text-xl">
-                N
-              </div>
-              <span className="text-white text-xl font-semibold" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>
-                neofarm.io
+            <div className="mb-4">
+              <span className="text-[28px] tracking-tight" style={{ fontFamily: 'var(--fb)' }}>
+                <span className="font-extrabold text-white">Neo</span>
+                <span className="font-light" style={{ color: 'var(--neon)' }}>Farm</span>
               </span>
             </div>
-            <p className="text-sm">Ganadería inteligente para el siglo XXI</p>
+            <p className="text-xs text-[var(--t3)] leading-relaxed">{t('footerTagline')}</p>
           </div>
-          
           <div>
-            <h4 className="text-white font-semibold mb-4">Producto</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/dashboard" className="hover:text-white">Dashboard</Link></li>
-              <li><Link href="#modulos" className="hover:text-white">Módulos</Link></li>
-              <li><Link href="#integraciones" className="hover:text-white">Integraciones</Link></li>
-              <li><Link href="/genetics" className="hover:text-white">FarmMatch™</Link></li>
-              <li><Link href="#precios" className="hover:text-white">Precios</Link></li>
+            <h4 className="text-sm font-semibold text-[var(--t1)] mb-4">{t('footerPlatform')}</h4>
+            <ul className="space-y-2 text-xs text-[var(--t3)]">
+              <li><a href="#platform" className="hover:text-[var(--t2)] transition-colors">{t('footerArch')}</a></li>
+              <li><a href="#platform" className="hover:text-[var(--t2)] transition-colors">{t('footerDT')}</a></li>
+              <li><a href="#platform" className="hover:text-[var(--t2)] transition-colors">{t('footerIoT')}</a></li>
+              <li><a href="#platform" className="hover:text-[var(--t2)] transition-colors">{t('footerComp')}</a></li>
             </ul>
           </div>
-          
           <div>
-            <h4 className="text-white font-semibold mb-4">Recursos</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
-              <li><Link href="/docs" className="hover:text-white">Documentación</Link></li>
-              <li><Link href="/api" className="hover:text-white">API</Link></li>
-              <li><Link href="/status" className="hover:text-white">Estado del servicio</Link></li>
-              <li><Link href="/changelog" className="hover:text-white">Changelog</Link></li>
+            <h4 className="text-sm font-semibold text-[var(--t1)] mb-4">{t('footerVerts')}</h4>
+            <ul className="space-y-2 text-xs text-[var(--t3)]">
+              <li><a href="https://hub.vacasdata.com/dashboard" className="hover:text-[var(--t2)] transition-colors">VacasData</a></li>
+              <li><a href="https://hub.porcdata.com/dashboard" className="hover:text-[var(--t2)] transition-colors">PorcData</a></li>
+              <li><a href="https://hub.ovosfera.com/dashboard" className="hover:text-[var(--t2)] transition-colors">OvoSfera</a></li>
+              <li><a href="#cta" className="hover:text-[var(--t2)] transition-colors">{t('footerYourVert')}</a></li>
             </ul>
           </div>
-          
           <div>
-            <h4 className="text-white font-semibold mb-4">Empresa</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/about" className="hover:text-white">Sobre nosotros</Link></li>
-              <li><Link href="/contact" className="hover:text-white">Contacto</Link></li>
-              <li><Link href="/press" className="hover:text-white">Prensa</Link></li>
-              <li><Link href="/careers" className="hover:text-white">Empleo</Link></li>
-              <li><Link href="/legal" className="hover:text-white">Legal</Link></li>
+            <h4 className="text-sm font-semibold text-[var(--t1)] mb-4">{t('footerResources')}</h4>
+            <ul className="space-y-2 text-xs text-[var(--t3)]">
+              <li><a href="#" className="hover:text-[var(--t2)] transition-colors">{t('footerBlog')}</a></li>
+              <li><a href="#" className="hover:text-[var(--t2)] transition-colors">{t('footerAPIDocs')}</a></li>
+              <li><a href="#" className="hover:text-[var(--t2)] transition-colors">{t('footerGitHub')}</a></li>
+              <li><a href="mailto:hello@neofarm.io" className="hover:text-[var(--t2)] transition-colors">{t('footerContact')}</a></li>
+              <li><a href="/dafo" className="hover:text-[var(--t2)] transition-colors">{t('footerDAFO')}</a></li>
             </ul>
           </div>
         </div>
-        
-        <div className="max-w-7xl mx-auto pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
-          <div>© 2026 NeoFarm Technologies S.L. · Todos los derechos reservados</div>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-white">Privacidad</Link>
-            <Link href="/terms" className="hover:text-white">Términos</Link>
-            <Link href="/cookies" className="hover:text-white">Cookies</Link>
-          </div>
+        <div className="pt-6 border-t border-white/5 text-center text-xs text-[var(--t3)]">
+          {t('footerCopy')}
         </div>
-      </footer>
-    </div>
+      </div>
+    </footer>
+  );
+}
+
+/* ─── MAIN PAGE ─── */
+export default function LandingPage() {
+  return (
+    <LangProvider>
+      <Navbar />
+      <Hero />
+      <ProblemSection />
+      <PlatformSection />
+      <DigitalTwinSection />
+      <ROISimulator />
+      <VerticalsSection />
+      <EcosystemSection />
+      <ComplianceSection />
+      <CTASection />
+      <Footer />
+    </LangProvider>
   );
 }
