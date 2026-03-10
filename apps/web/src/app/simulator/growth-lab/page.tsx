@@ -36,7 +36,7 @@ function GrowthChartFull({ curves, measurements, highlightBird }: {
         if (yy < pad.t || yy > h - pad.b) return null;
         return (
           <g key={kg}>
-            <line x1={pad.l} y1={yy} x2={w - pad.r} y2={yy} stroke="var(--neutral-800)" strokeWidth={0.5} />
+            <line x1={pad.l} y1={yy} x2={w - pad.r} y2={yy} stroke="var(--neutral-100)" strokeWidth={0.5} />
             <text x={pad.l - 4} y={yy + 3} textAnchor="end" fontSize={8} fill="var(--neutral-500)">{kg}kg</text>
           </g>
         );
@@ -151,7 +151,7 @@ export default function GrowthLabPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <TrendingUp size={20} style={{ color: 'var(--primary)' }} /> Growth Lab
         </h1>
         <span style={{ fontSize: 11, color: 'var(--neutral-400)' }}>Curvas Gompertz · Predicción · Clasificación</span>
@@ -179,7 +179,7 @@ export default function GrowthLabPage() {
 
       {/* Chart */}
       <div className="nf-card">
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-800)' }}>
           <BarChart2 size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Comparative W(t) = A × e^(-e^(-k(t-t₀)))
         </div>
@@ -200,7 +200,7 @@ export default function GrowthLabPage() {
 
       {/* Prediction slider */}
       <div className="nf-card">
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-800)' }}>
           <Target size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Predicción a día {predDay}
         </div>
@@ -209,8 +209,8 @@ export default function GrowthLabPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, marginTop: 8 }}>
           {predictions.map(p => (
             <div key={p.breed} style={{ padding: '8px 10px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.03)', borderLeft: `3px solid ${p.color}` }}>
-              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--neutral-200)' }}>{p.breed}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)' }}>{p.weight.toFixed(2)} kg</div>
+              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--neutral-800)' }}>{p.breed}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)' }}>{p.weight.toFixed(2)} kg</div>
               <div style={{ fontSize: 10, color: 'var(--neutral-400)' }}>
                 {destinationEmoji(p.dest)} {destinationLabel(p.dest)}
               </div>
@@ -221,7 +221,7 @@ export default function GrowthLabPage() {
 
       {/* Birds analysis table */}
       <div className="nf-card" style={{ padding: 0, overflow: 'auto' }}>
-        <div style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: 'var(--neutral-200)' }}>
+        <div style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: 'var(--neutral-800)' }}>
           <Activity size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Aves {sex === 'M' ? 'Machos' : 'Hembras'} · Desviación vs Gompertz
         </div>
@@ -242,10 +242,10 @@ export default function GrowthLabPage() {
               <tr key={r.bird.id} style={{ cursor: 'pointer' }}
                 onMouseEnter={() => setHighlightBird(r.bird.id)} onMouseLeave={() => setHighlightBird(null)}
                 onClick={() => window.location.href = `/genetics/birds/${r.bird.id}`}>
-                <td style={{ fontWeight: 500, color: 'var(--neutral-200)' }}>{r.bird.anilla}</td>
+                <td style={{ fontWeight: 500, color: 'var(--neutral-800)' }}>{r.bird.anilla}</td>
                 <td style={{ color: 'var(--neutral-400)' }}>{r.bird.generacion}</td>
                 <td style={{ color: 'var(--neutral-400)' }}>{r.ageD}d</td>
-                <td style={{ fontWeight: 600, color: 'var(--neutral-200)' }}>{r.bird.pesoActual ? `${r.bird.pesoActual}kg` : '—'}</td>
+                <td style={{ fontWeight: 600, color: 'var(--neutral-800)' }}>{r.bird.pesoActual ? `${r.bird.pesoActual}kg` : '—'}</td>
                 <td style={{ color: 'var(--neutral-400)' }}>{r.predicted ? `${r.predicted.toFixed(2)}kg` : '—'}</td>
                 <td>
                   {r.deviation !== null ? (

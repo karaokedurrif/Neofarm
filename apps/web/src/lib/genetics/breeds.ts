@@ -183,3 +183,37 @@ export function estimateCrossGompertz(
     ? { A: 4.0, k: 0.017, t0: 65 }
     : { A: 3.0, k: 0.017, t0: 63 };
 }
+
+/* ── Adapter: BreedCatalogEntry → BreedProfile (for simulator) ── */
+export interface BreedProfile {
+  name: string;
+  weight_m: number;
+  weight_f: number;
+  eggs_per_year: number;
+  carcass_pct: number;
+  growth: string;
+  comb: string;
+  origin?: string;
+  description?: string;
+  genetic_profile?: {
+    plumage_loci: Record<string, string>;
+    phenotype: string;
+    comb_type: string;
+    eye_color: string;
+    special_traits?: string[];
+  };
+}
+
+export function catalogToBreedProfile(entry: BreedCatalogEntry): BreedProfile {
+  return {
+    name: entry.nombre,
+    weight_m: entry.pesoMachoKg,
+    weight_f: entry.pesoHembraKg,
+    eggs_per_year: entry.huevosAnuales,
+    carcass_pct: entry.rendimientoCanal,
+    growth: entry.crecimiento === 'rapido' ? 'rápido' : entry.crecimiento,
+    comb: 'simple',
+    origin: entry.origen,
+    description: entry.descripcion,
+  };
+}

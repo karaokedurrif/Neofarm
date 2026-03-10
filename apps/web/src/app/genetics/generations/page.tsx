@@ -34,7 +34,7 @@ function GenCard({ gen, birds, prog }: { gen: string; birds: BirdType[]; prog: S
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span style={{ fontSize: 20, fontWeight: 800, color }}>{gen}</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-200)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-800)' }}>
             {birds.length} aves · {active.length} activas
           </div>
           <div style={{ fontSize: 11, color: 'var(--neutral-400)' }}>
@@ -45,7 +45,7 @@ function GenCard({ gen, birds, prog }: { gen: string; birds: BirdType[]; prog: S
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 10 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)' }}>{avgScore.toFixed(0)}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)' }}>{avgScore.toFixed(0)}</div>
           <div style={{ fontSize: 9, color: 'var(--neutral-500)' }}>Score medio</div>
         </div>
         <div style={{ textAlign: 'center' }}>
@@ -53,7 +53,7 @@ function GenCard({ gen, birds, prog }: { gen: string; birds: BirdType[]; prog: S
           <div style={{ fontSize: 9, color: 'var(--neutral-500)' }}>Top score</div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)' }}>{avgW.toFixed(1)}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)' }}>{avgW.toFixed(1)}</div>
           <div style={{ fontSize: 9, color: 'var(--neutral-500)' }}>Peso medio (kg)</div>
         </div>
         <div style={{ textAlign: 'center' }}>
@@ -66,7 +66,7 @@ function GenCard({ gen, birds, prog }: { gen: string; birds: BirdType[]; prog: S
       {genTraits.length > 0 && (
         <div>
           <div style={{ fontSize: 10, color: 'var(--neutral-500)', marginBottom: 4 }}>Fijación media: {avgFixation.toFixed(0)}%</div>
-          <div style={{ background: 'var(--neutral-800)', borderRadius: 3, height: 4, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--neutral-100)', borderRadius: 3, height: 4, overflow: 'hidden' }}>
             <div style={{ width: `${avgFixation}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.3s' }} />
           </div>
         </div>
@@ -80,9 +80,9 @@ function GenCard({ gen, birds, prog }: { gen: string; birds: BirdType[]; prog: S
             {ranked.slice(0, 3).map((r, i) => (
               <Link key={r.id} href={`/genetics/birds/${r.id}`}
                 style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3,
-                  background: 'rgba(var(--primary-rgb,180,130,50),0.05)', border: '1px solid var(--neutral-800)' }}>
+                  background: 'rgba(var(--primary-rgb,180,130,50),0.05)', border: '1px solid var(--neutral-100)' }}>
                 <span style={{ color: r.sexo === 'M' ? '#3B82F6' : '#EC4899' }}>{r.sexo === 'M' ? '♂' : '♀'}</span>
-                <span style={{ color: 'var(--neutral-300)' }}>{r.nombre || r.anilla}</span>
+                <span style={{ color: 'var(--neutral-700)' }}>{r.nombre || r.anilla}</span>
                 <span style={{ fontWeight: 700, color: scoreColor(r.score) }}>{r.score.toFixed(0)}</span>
               </Link>
             ))}
@@ -155,14 +155,14 @@ export default function GenerationsDashboardPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Layers size={20} style={{ color: 'var(--primary)' }} /> Generaciones
         </h1>
       </div>
 
       {/* Comparison chart */}
       <div className="nf-card">
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-800)' }}>
           <BarChart2 size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Evolución del Score por Generación
         </div>

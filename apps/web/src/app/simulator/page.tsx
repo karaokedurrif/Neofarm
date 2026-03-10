@@ -6,30 +6,15 @@ import {
   Loader2, FlaskConical, BarChart3, Star, Eye, Microscope, RefreshCw,
   ChevronDown, ImageIcon, BookOpen
 } from 'lucide-react';
+import { BREED_CATALOG, catalogToBreedProfile } from '@/lib/genetics/breeds';
+import type { BreedProfile } from '@/lib/genetics/breeds';
 
 /* ══════════════════════════════════════════════════════
    TYPES
    ══════════════════════════════════════════════════════ */
 const API_BASE = '/ext';
 
-interface BreedProfile {
-  name: string;
-  weight_m: number;
-  weight_f: number;
-  eggs_per_year: number;
-  carcass_pct: number;
-  growth: string;
-  comb: string;
-  origin?: string;
-  description?: string;
-  genetic_profile?: {
-    plumage_loci: Record<string, string>;
-    phenotype: string;
-    comb_type: string;
-    eye_color: string;
-    special_traits?: string[];
-  };
-}
+/* BreedProfile imported from @/lib/genetics/breeds */
 
 /* ── Image slug map: breeds that have real photos on the backend ── */
 const BREED_IMG_SLUG: Record<string, { male?: string; female?: string }> = {
@@ -57,7 +42,7 @@ function breedImgUrl(name: string, sex: 'male' | 'female'): string | null {
 /* ── Breed emoji fallback by category ── */
 const BREED_EMOJI: Record<string, string> = {
   'Bresse': '🇫🇷', 'Sulmtaler': '🇦🇹', 'Orpington': '🇬🇧', 'Plymouth Rock Barrada': '🇺🇸',
-  'Sussex': '🇬🇧', 'Vorwerk': '🇩🇪', 'Andaluza': '🇪🇸', 'Castellana': '🇪🇸', 'Castellana Negra': '🇪🇸',
+  'Sussex': '🇬🇧', 'Vorwerk': '🇩🇪', 'Andaluza': '🇪🇸', 'Andaluza Azul': '🇪🇸', 'Castellana': '🇪🇸', 'Castellana Negra': '🇪🇸',
   'Brahma': '🐘', 'Cornish': '💪', 'Cochin': '🐉', 'Rhode Island Red': '🇺🇸', 'New Hampshire': '🇺🇸',
   'Wyandotte': '🌸', 'Australorp': '🇦🇺', 'Marans': '🍫', 'Faverolles': '🧔', 'Dorking': '🏰',
   'Jersey Giant': '🦕', 'Euskal Oiloa': '🇪🇸', 'Pita Pinta Asturiana': '🇪🇸', 'Prat Leonada': '🇪🇸',
@@ -192,33 +177,24 @@ export default function SimulatorPage() {
         setLoading(false);
       } catch (e: any) {
         console.error('Breeds fetch error:', e);
-        // Fallback demo breeds — 42 razas para capones gourmet
-        setBreeds([
-          { name: 'Bresse', weight_m: 4.5, weight_f: 3.5, eggs_per_year: 200, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Francia', description: 'La "Reina de las gallinas" francesa. Carne marmoleada excepcional, ideal para capones de alta gama. AOC protegida.' },
-          { name: 'Sulmtaler', weight_m: 4.0, weight_f: 3.0, eggs_per_year: 180, carcass_pct: 68, growth: 'medio', comb: 'nuez', origin: 'Austria', description: 'Raza austríaca de doble propósito. Carne jugosa y sabrosa, excelente para capones tradicionales.' },
-          { name: 'Orpington', weight_m: 4.5, weight_f: 3.5, eggs_per_year: 160, carcass_pct: 65, growth: 'lento', comb: 'simple', origin: 'Reino Unido', description: 'Ave grande y dócil con carne tierna. Plumaje denso, crecimiento lento que favorece infiltración grasa.' },
+        // Fallback: 12 heritage breeds from BREED_CATALOG (single source of truth) + 30 supplementary breeds
+        const catalogBreeds = BREED_CATALOG.map(catalogToBreedProfile);
+        const catalogNames = new Set(catalogBreeds.map(b => b.name));
+        const supplementaryBreeds: BreedProfile[] = [
           { name: 'Plymouth Rock Barrada', weight_m: 4.3, weight_f: 3.3, eggs_per_year: 200, carcass_pct: 72, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos', description: 'Raza americana versátil. Excelente conversión alimenticia, carne sabrosa y alto rendimiento en canal.' },
           { name: 'Cochin', weight_m: 4.8, weight_f: 3.8, eggs_per_year: 140, carcass_pct: 68, growth: 'lento', comb: 'guisante', origin: 'China', description: 'Gigante asiática con plumaje abundante. Carne tierna con buena infiltración grasa, ideal para cruces.' },
-          { name: 'Sussex', weight_m: 4.2, weight_f: 3.2, eggs_per_year: 210, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Reino Unido', description: 'Raza británica clásica. Carne blanca de calidad, temperamento tranquilo, excelente ponedora.' },
           { name: 'Vorwerk', weight_m: 3.5, weight_f: 2.8, eggs_per_year: 170, carcass_pct: 66, growth: 'medio', comb: 'simple', origin: 'Alemania', description: 'Alemana resistente con plumaje leonado-negro. Carne sabrosa, buena forrajeadora.' },
-          { name: 'Andaluza', weight_m: 3.0, weight_f: 2.5, eggs_per_year: 180, carcass_pct: 64, growth: 'rápido', comb: 'simple', origin: 'España', description: 'Mediterránea ligera y vivaz. Plumaje azul-grisáceo, adaptada a climas cálidos.' },
-          { name: 'Castellana Negra', weight_m: 3.2, weight_f: 2.6, eggs_per_year: 190, carcass_pct: 67, growth: 'rápido', comb: 'simple', origin: 'España', description: 'Autóctona española rústica. Carne sabrosa y fibrosa, excelente adaptación a extensivo.' },
-          { name: 'Brahma', weight_m: 5.0, weight_f: 4.0, eggs_per_year: 140, carcass_pct: 68, growth: 'lento', comb: 'guisante', origin: 'India', description: 'Ave gigante de origen asiático. Gran volumen de carne, temperamento dócil, patas emplumadas.' },
           { name: 'Cornish', weight_m: 4.0, weight_f: 2.5, eggs_per_year: 80, carcass_pct: 75, growth: 'medio', comb: 'guisante', origin: 'Reino Unido', description: 'Base genética del pollo industrial. Pecho ancho y musculoso, máximo rendimiento en canal.' },
           { name: 'Rhode Island Red', weight_m: 3.9, weight_f: 2.9, eggs_per_year: 220, carcass_pct: 70, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos', description: 'Ponedora prolífica y resistente. Plumaje rojo caoba, excelente doble propósito.' },
           { name: 'New Hampshire', weight_m: 3.8, weight_f: 2.8, eggs_per_year: 200, carcass_pct: 72, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos', description: 'Derivada de Rhode Island, seleccionada para carne. Crecimiento rápido, buena canal.' },
           { name: 'Wyandotte', weight_m: 3.8, weight_f: 2.8, eggs_per_year: 180, carcass_pct: 70, growth: 'medio', comb: 'rosa', origin: 'Estados Unidos', description: 'Robusta con cresta rosa, adaptada a climas fríos. Plumaje ribeteado decorativo.' },
           { name: 'Australorp', weight_m: 3.9, weight_f: 3.1, eggs_per_year: 250, carcass_pct: 68, growth: 'rápido', comb: 'simple', origin: 'Australia', description: 'Récord mundial de puesta (364 huevos/año). Plumaje negro con reflejos verdes.' },
           { name: 'Marans', weight_m: 3.5, weight_f: 2.6, eggs_per_year: 150, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Francia', description: 'Famosa por sus huevos chocolate oscuro. Carne sabrosa, plumaje cobrizo oscuro.' },
-          { name: 'Faverolles', weight_m: 4.0, weight_f: 3.3, eggs_per_year: 160, carcass_pct: 68, growth: 'lento', comb: 'simple', origin: 'Francia', description: 'Francesa con barba y 5 dedos. Carne fina y delicada, temperamento dócil.' },
-          { name: 'Dorking', weight_m: 4.5, weight_f: 3.6, eggs_per_year: 140, carcass_pct: 70, growth: 'lento', comb: 'simple', origin: 'Reino Unido', description: 'Una de las razas más antiguas de Europa. 5 dedos, carne blanca de textura excepcional.' },
           { name: 'Jersey Giant', weight_m: 5.5, weight_f: 4.5, eggs_per_year: 180, carcass_pct: 72, growth: 'lento', comb: 'simple', origin: 'Estados Unidos', description: 'La raza de gallina más grande. Creada como alternativa al pavo, crecimiento lento pero gran volumen.' },
           { name: 'Euskal Oiloa', weight_m: 4.0, weight_f: 2.9, eggs_per_year: 200, carcass_pct: 68, growth: 'medio', comb: 'simple', origin: 'País Vasco', description: 'Raza autóctona vasca, "Gallina del País". Carne de calidad, resistente y buena ponedora.' },
-          { name: 'Pita Pinta Asturiana', weight_m: 4.3, weight_f: 2.8, eggs_per_year: 180, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Asturias', description: 'Raza asturiana en peligro de extinción. Plumaje moteado, carne sabrosa, gran rusticidad.' },
           { name: 'Prat Leonada', weight_m: 3.5, weight_f: 2.5, eggs_per_year: 180, carcass_pct: 70, growth: 'medio', comb: 'simple', origin: 'Cataluña', description: 'Raza catalana premium. Piel y tarsos rosados, carne fina con Denominación de Calidad.' },
           { name: 'Penedesenca Negra', weight_m: 3.0, weight_f: 2.3, eggs_per_year: 160, carcass_pct: 65, growth: 'rápido', comb: 'simple', origin: 'Cataluña', description: 'Catalana de plumaje negro intenso. Huevos de cáscara muy oscura, rústica y forrajeadora.' },
           { name: 'Mos', weight_m: 4.0, weight_f: 3.0, eggs_per_year: 190, carcass_pct: 72, growth: 'lento', comb: 'guisante', origin: 'Galicia', description: 'Autóctona gallega, cresta en guisante. Carne excepcional para capones, adaptada a clima atlántico.' },
-          { name: 'Malines', weight_m: 5.0, weight_f: 3.8, eggs_per_year: 150, carcass_pct: 72, growth: 'lento', comb: 'simple', origin: 'Bélgica', description: 'Gigante belga, base del "Coucou de Malines". Carne fina y abundante, ideal para capones premium.' },
           { name: 'Ayam Cemani', weight_m: 2.0, weight_f: 1.4, eggs_per_year: 140, carcass_pct: 60, growth: 'medio', comb: 'simple', origin: 'Indonesia', description: 'Gallina negra total (piel, huesos, carne). Fibromelanosis, ave ornamental de gran valor.' },
           { name: 'Delaware', weight_m: 3.8, weight_f: 2.8, eggs_per_year: 200, carcass_pct: 72, growth: 'rápido', comb: 'simple', origin: 'Estados Unidos', description: 'Cruce de New Hampshire × Plymouth Rock. Plumaje blanco colombino, eficiente para carne.' },
           { name: 'Naked Neck', weight_m: 3.5, weight_f: 2.5, eggs_per_year: 160, carcass_pct: 72, growth: 'medio', comb: 'simple', origin: 'Transilvania', description: 'Cuello desnudo sin plumas. Tolerante al calor, fácil desplume, alto rendimiento en canal.' },
@@ -235,8 +211,8 @@ export default function SimulatorPage() {
           { name: 'Hamburg', weight_m: 2.5, weight_f: 2.0, eggs_per_year: 200, carcass_pct: 62, growth: 'rápido', comb: 'rosa', origin: 'Alemania', description: 'Elegante ave de plumaje lentejuelado. Cresta en rosa, ligera y nerviosa, buena ponedora.' },
           { name: 'Campine', weight_m: 2.5, weight_f: 2.0, eggs_per_year: 180, carcass_pct: 62, growth: 'rápido', comb: 'simple', origin: 'Bélgica', description: 'Belga ligera con plumaje lentejuelado dorado o plateado. Ave ornamental y ponedora.' },
           { name: 'Araucana', weight_m: 2.8, weight_f: 2.2, eggs_per_year: 170, carcass_pct: 66, growth: 'medio', comb: 'guisante', origin: 'Chile', description: 'Única raza que pone huevos azules/verdes. Aretes y sin cola, genética única sudamericana.' },
-          { name: 'Bielefelder', weight_m: 4.2, weight_f: 3.2, eggs_per_year: 220, carcass_pct: 70, growth: 'rápido', comb: 'simple', origin: 'Alemania', description: 'Alemana moderna autosexable al nacer. Gran tamaño, carne sabrosa, excelente doble propósito.' },
-        ]);
+        ].filter(b => !catalogNames.has(b.name));
+        setBreeds([...catalogBreeds, ...supplementaryBreeds]);
         setError('Usando catálogo demo — API no disponible');
         setLoading(false);
       }

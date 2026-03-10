@@ -108,7 +108,7 @@ export default function BirdRegistryPage() {
           ← Programa
         </Link>
         <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Bird size={20} style={{ color: 'var(--primary)' }} />
             Registro de Aves
           </h1>
@@ -119,7 +119,7 @@ export default function BirdRegistryPage() {
       </div>
 
       {/* Search + Filters */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '10px 14px', borderRadius: 10, background: 'var(--neutral-50)', border: '1px solid var(--neutral-100)' }}>
         <div style={{ position: 'relative', flex: '1 1 200px', maxWidth: 300 }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--neutral-500)' }} />
           <input className="nf-input" placeholder="Buscar anilla, nombre, raza…" value={search} onChange={e => setSearch(e.target.value)}
@@ -194,8 +194,8 @@ export default function BirdRegistryPage() {
             {filtered.slice(0, 100).map(({ bird: b, score }) => (
               <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => window.location.href = `/genetics/birds/${b.id}`}>
                 <td><StatusDot status={b.estadoProductivo} /></td>
-                <td style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--neutral-200)' }}>{b.anilla}</td>
-                <td style={{ color: 'var(--neutral-300)' }}>{b.nombre || '—'}</td>
+                <td style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--neutral-800)' }}>{b.anilla}</td>
+                <td style={{ color: 'var(--neutral-700)' }}>{b.nombre || '—'}</td>
                 <td><SexIcon sex={b.sexo} /></td>
                 <td><GenBadge gen={b.generacion} /></td>
                 <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--neutral-400)' }}>{b.raza}</td>
@@ -208,7 +208,7 @@ export default function BirdRegistryPage() {
                     </span>
                   )}
                 </td>
-                <td style={{ fontWeight: 600, color: 'var(--neutral-200)' }}>{b.pesoActual ? `${b.pesoActual} kg` : '—'}</td>
+                <td style={{ fontWeight: 600, color: 'var(--neutral-800)' }}>{b.pesoActual ? `${b.pesoActual} kg` : '—'}</td>
                 <td>
                   {b.conformacionPecho ? (
                     <span title={`Pecho: ${b.conformacionPecho}/5`}>

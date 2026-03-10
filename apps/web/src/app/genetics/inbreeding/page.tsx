@@ -83,7 +83,7 @@ export default function InbreedingPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Shield size={20} style={{ color: '#F59E0B' }} /> Observatorio de Consanguinidad
         </h1>
       </div>
@@ -98,7 +98,7 @@ export default function InbreedingPage() {
 
       {/* Heatmap */}
       <div className="nf-card" style={{ overflowX: 'auto' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-800)' }}>
           <Heart size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Mapa de Calor — COI Previsto (♂ × ♀)
         </div>
@@ -138,7 +138,7 @@ export default function InbreedingPage() {
       {/* Selected pair detail */}
       {pairDetail && (
         <div className="nf-card" style={{ borderLeft: `4px solid ${coiColor(pairDetail.coi)}` }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-800)' }}>
             <Dna size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
             {pairDetail.macho?.nombre || pairDetail.macho?.anilla} × {pairDetail.hembra?.nombre || pairDetail.hembra?.anilla}
           </div>
@@ -157,12 +157,12 @@ export default function InbreedingPage() {
             </div>
             <div className="nf-kbox">
               <div style={{ fontSize: 10, color: 'var(--neutral-500)' }}>Ancestros Comunes</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--neutral-100)' }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--neutral-900)' }}>
                 {pairDetail.commonAnc.length}
               </div>
             </div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--neutral-300)', lineHeight: 1.6, padding: '8px 10px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
+          <div style={{ fontSize: 12, color: 'var(--neutral-700)', lineHeight: 1.6, padding: '8px 10px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
             {pairDetail.explain}
           </div>
           {pairDetail.commonAnc.length > 0 && (
@@ -178,7 +178,7 @@ export default function InbreedingPage() {
 
       {/* Per-bird COI table */}
       <div className="nf-card" style={{ padding: 0, overflow: 'auto' }}>
-        <div style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: 'var(--neutral-200)' }}>
+        <div style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: 'var(--neutral-800)' }}>
           <Shield size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           COI por Ave (aves con pedigrí)
         </div>
@@ -189,7 +189,7 @@ export default function InbreedingPage() {
           <tbody>
             {birdCOIs.slice(0, 30).map(r => (
               <tr key={r.bird.id} style={{ cursor: 'pointer' }} onClick={() => window.location.href = `/genetics/birds/${r.bird.id}`}>
-                <td style={{ fontWeight: 500, color: 'var(--neutral-200)' }}>{r.bird.anilla}</td>
+                <td style={{ fontWeight: 500, color: 'var(--neutral-800)' }}>{r.bird.anilla}</td>
                 <td style={{ color: 'var(--neutral-400)' }}>{r.bird.generacion}</td>
                 <td style={{ fontWeight: 700, color: coiColor(r.coi) }}>{(r.coi * 100).toFixed(2)}%</td>
                 <td style={{ color: coiColor(r.coi) }}>{coiLabel(r.coi)}</td>

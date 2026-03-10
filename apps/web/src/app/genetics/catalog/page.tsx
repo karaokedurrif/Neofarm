@@ -42,7 +42,7 @@ function BreedCard({ breed }: { breed: BreedCatalogEntry }) {
           <Bird size={18} style={{ color: 'var(--primary)' }} />
         </div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--neutral-100)' }}>{breed.nombre}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--neutral-900)' }}>{breed.nombre}</div>
           <div style={{ fontSize: 10, color: 'var(--neutral-400)' }}>{breed.origen}</div>
         </div>
       </div>
@@ -51,25 +51,25 @@ function BreedCard({ breed }: { breed: BreedCatalogEntry }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 11 }}>
         <div style={{ padding: '4px 6px', borderRadius: 4, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
           <span style={{ color: 'var(--neutral-500)' }}>♂ Peso adulto:</span>{' '}
-          <b style={{ color: 'var(--neutral-200)' }}>{breed.pesoMachoKg} kg</b>
+          <b style={{ color: 'var(--neutral-800)' }}>{breed.pesoMachoKg} kg</b>
         </div>
         <div style={{ padding: '4px 6px', borderRadius: 4, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
           <span style={{ color: 'var(--neutral-500)' }}>♀ Peso adulto:</span>{' '}
-          <b style={{ color: 'var(--neutral-200)' }}>{breed.pesoHembraKg} kg</b>
+          <b style={{ color: 'var(--neutral-800)' }}>{breed.pesoHembraKg} kg</b>
         </div>
         <div style={{ padding: '4px 6px', borderRadius: 4, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
           <span style={{ color: 'var(--neutral-500)' }}>Huevos/año:</span>{' '}
-          <b style={{ color: 'var(--neutral-200)' }}>{breed.huevosAnuales}</b>
+          <b style={{ color: 'var(--neutral-800)' }}>{breed.huevosAnuales}</b>
         </div>
         <div style={{ padding: '4px 6px', borderRadius: 4, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
           <span style={{ color: 'var(--neutral-500)' }}>Rto. canal:</span>{' '}
-          <b style={{ color: 'var(--neutral-200)' }}>{breed.rendimientoCanal}%</b>
+          <b style={{ color: 'var(--neutral-800)' }}>{breed.rendimientoCanal}%</b>
         </div>
       </div>
 
       {/* Ratings */}
       <div style={{ display: 'flex', gap: 16, fontSize: 11 }}>
-        <span><span style={{ color: 'var(--neutral-500)' }}>Crecimiento:</span> <span style={{ color: 'var(--neutral-200)', fontWeight: 500 }}>{breed.crecimiento}</span></span>
+        <span><span style={{ color: 'var(--neutral-500)' }}>Crecimiento:</span> <span style={{ color: 'var(--neutral-800)', fontWeight: 500 }}>{breed.crecimiento}</span></span>
         <span><span style={{ color: 'var(--neutral-500)' }}>Rusticidad:</span> <Stars val={breed.rusticidad} /></span>
         <span><span style={{ color: 'var(--neutral-500)' }}>Docilidad:</span> <Stars val={breed.docilidad} /></span>
       </div>
@@ -133,7 +133,7 @@ export default function CatalogPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <BookOpen size={20} style={{ color: 'var(--primary)' }} /> Catálogo de Razas Heritage
         </h1>
         <span style={{ fontSize: 11, color: 'var(--neutral-400)' }}>{BREED_CATALOG.length} razas</span>

@@ -17,13 +17,13 @@ function BirdChip({ bird, score, onClick, selected }: { bird: BirdType; score: n
     <div onClick={onClick}
       style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
         background: selected ? 'rgba(var(--primary-rgb,180,130,50),0.15)' : 'rgba(var(--primary-rgb,180,130,50),0.03)',
-        border: `1px solid ${selected ? 'var(--primary)' : 'var(--neutral-800)'}`,
+        border: `1px solid ${selected ? 'var(--primary)' : 'var(--neutral-100)'}`,
         transition: 'all 0.15s', userSelect: 'none' }}>
       <span style={{ fontSize: 14, color: bird.sexo === 'M' ? '#3B82F6' : '#EC4899' }}>
         {bird.sexo === 'M' ? '♂' : '♀'}
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-200)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {bird.nombre || bird.anilla}
         </div>
         <div style={{ fontSize: 9, color: 'var(--neutral-500)' }}>{bird.generacion} · {bird.raza}</div>
@@ -45,7 +45,7 @@ function PairCard({ pair, prog, onRemove }: { pair: BreedingPair; prog: Selectio
     <div className="nf-card" style={{ padding: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <Heart size={14} style={{ color: '#EC4899' }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-200)', flex: 1 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-800)', flex: 1 }}>
           {macho?.nombre || macho?.anilla || '?'} × {hembra?.nombre || hembra?.anilla || '?'}
         </span>
         {pair.activo && <span className="nf-tag" style={{ fontSize: 9, background: '#16A34A22', color: '#16A34A' }}>Activa</span>}
@@ -68,8 +68,8 @@ function PairCard({ pair, prog, onRemove }: { pair: BreedingPair; prog: Selectio
       <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 10 }}>
         <span>COI hijos: <b style={{ color: coiColor(coi) }}>{(coi * 100).toFixed(2)}%</b></span>
         <span>Riesgo: <b style={{ color: coiColor(coi) }}>{risk}</b></span>
-        <span>Objetivo: <b style={{ color: 'var(--neutral-300)' }}>{pair.objetivo || '—'}</b></span>
-        <span>Hijos: <b style={{ color: 'var(--neutral-200)' }}>{pair.descendientes?.length || 0}</b></span>
+        <span>Objetivo: <b style={{ color: 'var(--neutral-700)' }}>{pair.objetivo || '—'}</b></span>
+        <span>Hijos: <b style={{ color: 'var(--neutral-800)' }}>{pair.descendientes?.length || 0}</b></span>
       </div>
 
       {desc && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--neutral-500)', fontStyle: 'italic' }}>{desc}</div>}
@@ -143,7 +143,7 @@ export default function MateCanvasPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Heart size={20} style={{ color: '#EC4899' }} /> Mate Canvas
         </h1>
       </div>
@@ -153,7 +153,7 @@ export default function MateCanvasPage() {
       </div>
 
       {/* Filter */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 14px', borderRadius: 10, background: 'var(--neutral-50)', border: '1px solid var(--neutral-100)' }}>
         <select className="nf-input" value={filterGen} onChange={e => setFilterGen(e.target.value)} style={{ height: 32, width: 120 }}>
           <option value="all">Todas gens</option>
           {generations.map(g => <option key={g} value={g}>{g}</option>)}
@@ -184,10 +184,10 @@ export default function MateCanvasPage() {
         {/* Center: Preview */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, minWidth: 160 }}>
           <div className="nf-card" style={{ textAlign: 'center', padding: 16, minWidth: 140 }}>
-            <Heart size={24} style={{ color: selectedMale && selectedFemale ? '#EC4899' : 'var(--neutral-700)' }} />
+            <Heart size={24} style={{ color: selectedMale && selectedFemale ? '#EC4899' : 'var(--neutral-200)' }} />
             {selectedMale && selectedFemale ? (
               <>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-200)', marginTop: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-800)', marginTop: 8 }}>
                   COI Previsto
                 </div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: previewCOI !== null ? coiColor(previewCOI) : 'var(--neutral-500)', marginTop: 4 }}>
@@ -224,7 +224,7 @@ export default function MateCanvasPage() {
 
       {/* Existing pairs */}
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-800)' }}>
           <Layers size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Parejas de Cría ({prog.breedingPairs.length})
         </div>

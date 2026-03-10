@@ -84,14 +84,14 @@ export default function QuickEntryPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4, maxWidth: 600 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ClipboardList size={20} style={{ color: 'var(--primary)' }} /> Entrada Rápida
         </h1>
       </div>
 
       {/* Bird selector */}
       <div className="nf-card">
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-200)', marginBottom: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-800)', marginBottom: 8 }}>
           <Bird size={14} style={{ verticalAlign: -2, marginRight: 4 }} /> Seleccionar Ave
         </div>
         <div style={{ position: 'relative', marginBottom: 8 }}>
@@ -106,7 +106,7 @@ export default function QuickEntryPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12,
                   background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
                 <span style={{ color: b.sexo === 'M' ? '#3B82F6' : '#EC4899' }}>{b.sexo === 'M' ? '♂' : '♀'}</span>
-                <span style={{ fontWeight: 600, color: 'var(--neutral-200)' }}>{b.anilla}</span>
+                <span style={{ fontWeight: 600, color: 'var(--neutral-800)' }}>{b.anilla}</span>
                 <span style={{ color: 'var(--neutral-400)' }}>{b.nombre}</span>
                 <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--neutral-500)' }}>{b.generacion}</span>
               </div>
@@ -117,7 +117,7 @@ export default function QuickEntryPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.08)', border: '1px solid var(--primary)' }}>
             <span style={{ color: bird.sexo === 'M' ? '#3B82F6' : '#EC4899', fontSize: 16 }}>{bird.sexo === 'M' ? '♂' : '♀'}</span>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-200)' }}>{bird.anilla} — {bird.nombre}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-800)' }}>{bird.anilla} — {bird.nombre}</div>
               <div style={{ fontSize: 10, color: 'var(--neutral-400)' }}>{bird.generacion} · {bird.raza} · {bird.pesoActual}kg</div>
             </div>
             <button onClick={() => setSelectedBird(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--neutral-400)', fontSize: 12 }}>✕</button>
@@ -126,7 +126,7 @@ export default function QuickEntryPage() {
       </div>
 
       {/* Mode tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--neutral-800)' }}>
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--neutral-100)' }}>
         {([['pesaje', '⚖️ Pesaje'], ['evento', '📋 Evento'], ['evaluacion', '⭐ Evaluación']] as const).map(([m, label]) => (
           <button key={m} onClick={() => setMode(m as Mode)}
             style={{ padding: '8px 16px', fontSize: 12, border: 'none', cursor: 'pointer', background: 'transparent',
@@ -194,7 +194,7 @@ export default function QuickEntryPage() {
                 {[1, 2, 3, 4, 5].map(n => (
                   <button key={n} onClick={() => attr.set(n)}
                     style={{ width: 36, height: 36, borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 14,
-                      background: n <= attr.val ? '#F59E0B22' : 'var(--neutral-800)',
+                      background: n <= attr.val ? '#F59E0B22' : 'var(--neutral-100)',
                       color: n <= attr.val ? '#F59E0B' : 'var(--neutral-600)' }}>
                     ★
                   </button>

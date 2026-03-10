@@ -84,7 +84,7 @@ function QuickNav({ href, Icon, label, desc, badge }: { href: string; Icon: any;
         <Icon size={18} style={{ color: 'var(--primary)' }} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-100)' }}>{label}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-900)' }}>{label}</div>
         <div style={{ fontSize: 11, color: 'var(--neutral-400)', marginTop: 1 }}>{desc}</div>
       </div>
       {badge && <span className="nf-tag" style={{ fontSize: 10 }}>{badge}</span>}
@@ -152,7 +152,7 @@ export default function GeneticsCommandCenter() {
           <Dna size={22} color="#fff" />
         </div>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--neutral-100)' }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--neutral-900)' }}>
             {prog.nombre}
           </h1>
           <div style={{ fontSize: 12, color: 'var(--neutral-400)' }}>
@@ -181,21 +181,21 @@ export default function GeneticsCommandCenter() {
               <kpi.icon size={14} style={{ color: kpi.color }} />
               <span style={{ fontSize: 11, color: 'var(--neutral-400)' }}>{kpi.label}</span>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--neutral-100)' }}>{kpi.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--neutral-900)' }}>{kpi.value}</div>
           </div>
         ))}
       </div>
 
       {/* Generational River */}
       <div className="nf-card">
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-800)' }}>
           <TrendingUp size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Río Generacional
         </div>
         <GenerationalRiver birds={prog.birds} />
         <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: 'var(--neutral-400)' }}>
           {Object.entries(stats.byGeneration).map(([gen, count]) => (
-            <span key={gen}>{gen}: <b style={{ color: 'var(--neutral-200)' }}>{count}</b> activas</span>
+            <span key={gen}>{gen}: <b style={{ color: 'var(--neutral-800)' }}>{count}</b> activas</span>
           ))}
         </div>
       </div>
@@ -204,7 +204,7 @@ export default function GeneticsCommandCenter() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Alerts */}
         <div className="nf-card">
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-800)' }}>
             <AlertTriangle size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
             Alertas del Programa
           </div>
@@ -217,7 +217,7 @@ export default function GeneticsCommandCenter() {
               {alerts.map(a => (
                 <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: '6px 8px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
                   <AlertBadge severity={a.severidad} />
-                  <span style={{ fontSize: 12, color: 'var(--neutral-300)', lineHeight: 1.4 }}>{a.descripcion}</span>
+                  <span style={{ fontSize: 12, color: 'var(--neutral-700)', lineHeight: 1.4 }}>{a.descripcion}</span>
                 </div>
               ))}
             </div>
@@ -226,7 +226,7 @@ export default function GeneticsCommandCenter() {
 
         {/* Top F2 */}
         <div className="nf-card">
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-800)' }}>
             <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
             Top 5 F2 por Score
           </div>
@@ -240,10 +240,10 @@ export default function GeneticsCommandCenter() {
                 <Link key={r.id} href={`/genetics/birds/${r.id}`}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 6, textDecoration: 'none', fontSize: 12, transition: 'background 0.15s' }}>
                   <span style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: i === 0 ? 'var(--primary)' : 'var(--neutral-700)', color: i === 0 ? '#fff' : 'var(--neutral-300)', fontSize: 10, fontWeight: 700 }}>
+                    background: i === 0 ? 'var(--primary)' : 'var(--neutral-200)', color: i === 0 ? '#fff' : 'var(--neutral-700)', fontSize: 10, fontWeight: 700 }}>
                     {i + 1}
                   </span>
-                  <span style={{ color: 'var(--neutral-200)', fontWeight: 500 }}>{r.anilla}</span>
+                  <span style={{ color: 'var(--neutral-800)', fontWeight: 500 }}>{r.anilla}</span>
                   <span style={{ color: 'var(--neutral-400)' }}>{r.sexo === 'M' ? '♂' : '♀'} {r.pesoActual}kg</span>
                   <span style={{ marginLeft: 'auto', fontWeight: 700, color: r.score >= 70 ? '#16A34A' : r.score >= 50 ? '#F59E0B' : '#DC2626' }}>
                     {r.score.toFixed(0)}
@@ -257,7 +257,7 @@ export default function GeneticsCommandCenter() {
 
       {/* Trait Lock Board Summary */}
       <div className="nf-card">
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-800)' }}>
           <Shield size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Progreso de Fijación de Rasgos
         </div>
@@ -268,12 +268,12 @@ export default function GeneticsCommandCenter() {
             return (
               <div key={t.traitId} style={{ padding: '8px 10px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--neutral-200)' }}>{trait?.nombre || t.traitId}</span>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--neutral-800)' }}>{trait?.nombre || t.traitId}</span>
                   <span style={{ fontSize: 10, color: levelColors[t.nivel] || '#888', fontWeight: 600 }}>
                     {t.nivel === 'emergent' ? 'Emergente' : t.nivel === 'unstable' ? 'Inestable' : t.nivel === 'almost_fixed' ? 'Casi fijo' : t.nivel === 'fixed' ? 'Fijado' : 'Perdido'}
                   </span>
                 </div>
-                <div style={{ background: 'var(--neutral-800)', borderRadius: 3, height: 6, overflow: 'hidden' }}>
+                <div style={{ background: 'var(--neutral-100)', borderRadius: 3, height: 6, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${t.porcentajeFijacion}%`, background: levelColors[t.nivel], borderRadius: 3, transition: 'width 0.3s' }} />
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--neutral-500)', marginTop: 2 }}>{t.porcentajeFijacion}%</div>
@@ -285,7 +285,7 @@ export default function GeneticsCommandCenter() {
 
       {/* Navigation Grid */}
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-800)' }}>
           <LayoutGrid size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
           Módulos del Programa
         </div>
