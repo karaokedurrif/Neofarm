@@ -1,787 +1,305 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import {
-  Dna, Sparkles, Sliders, Send, Loader2, ChevronRight, Bird,
-  Target, Shield, Zap, Heart, Sun, TreePine, Egg, Scissors,
-  BarChart3, AlertTriangle, BookOpen, Map, Calendar, Bot,
-  X, Download, ArrowRight, RefreshCw
+  Dna, Bird, BarChart3, Heart, Egg, Shield, Target, Zap,
+  TrendingUp, AlertTriangle, ChevronRight, Activity,
+  Users, Beaker, Eye, ClipboardList, BookOpen, FileText,
+  LayoutGrid, Layers, ArrowRight, Sparkles
 } from 'lucide-react';
+import { loadProgram, programStats } from '@/lib/genetics/store';
+import type { SelectionProgram, Bird as BirdType, SelectionAlert } from '@/lib/genetics/types';
+import { rankBirds } from '@/lib/genetics/services/scoring.service';
+import { estimateOffspringCOI } from '@/lib/genetics/services/inbreeding.service';
 
-/* ── Constants ── */
-const API_BASE = '/ext';
-
-/* ── Types ── */
-type Tab = 'plantel' | 'recommender';
-
-interface BreedSummary {
-  name: string;
-  weight_m: number;
-  weight_f: number;
-  eggs_per_year: number;
-  carcass_pct: number;
-  growth: string;
-  origin: string;
-  rusticity: number;
-  docility: number;
-}
-
-interface ObjectiveSlider {
-  key: string;
-  label: string;
-  icon: any;
-  color: string;
-  value: number;
-  description: string;
-}
-
-interface RecommendResult {
-  resumen_ejecutivo?: string;
-  cruces_recomendados?: any[];
-  plan_parque?: any;
-  consanguinidad?: any;
-  roadmap_f1_f5?: any[];
-  nutricion_clave?: string;
-  timeline_meses?: any[];
-  raw_response?: string;
-  parse_error?: boolean;
-}
-
-/* ── Plantel: loaded from localStorage (shared with /aves page) ── */
-interface PlantelAve {
-  id: string;
-  nombre: string;
-  raza: string;
-  sexo: 'M' | 'H';
-  edad: string;
-  peso: number;
-  notas: string;
-  color?: string;
-  fenotipo?: string;
-  genotipo?: string;
-}
-
-function calcEdadStr(fechaNac: string): string {
-  const d = new Date(fechaNac);
-  const now = new Date();
-  const months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
-  if (months < 1) return '< 1 mes';
-  if (months < 12) return `${months} meses`;
-  const y = Math.floor(months / 12);
-  const r = months % 12;
-  return r > 0 ? `${y}a ${r}m` : `${y} años`;
-}
-
-function loadPlantelFromStorage(): PlantelAve[] {
-  try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('ovosfera_aves') : null;
-    if (!raw) return [];
-    const aves = JSON.parse(raw) as any[];
-    // Filter: only Reproductor estado
-    return aves
-      .filter((a: any) => a.estado === 'Reproductor')
-      .map((a: any) => ({
-        id: a.anilla || `AVE-${a.id}`,
-        nombre: `${a.tipo} ${a.raza.split(' ')[0]}-${String(a.id).padStart(2, '0')}`,
-        raza: a.raza,
-        sexo: a.sexo as 'M' | 'H',
-        edad: calcEdadStr(a.fechaNac),
-        peso: a.peso,
-        notas: a.estado,
-        color: a.color,
-        fenotipo: a.fenotipo,
-        genotipo: a.genotipo,
-      }));
-  } catch {
-    return [];
-  }
-}
-
-const PLANTEL_FALLBACK: PlantelAve[] = [
-  { id: 'OVS-2025-0020', nombre: 'Gallo CN-01', raza: 'Castellana Negra', sexo: 'M', edad: '4 años', peso: 3.2, notas: 'Reproductor principal' },
-  { id: 'OVS-2025-0021', nombre: 'Gallo PL-01', raza: 'Prat Leonada', sexo: 'M', edad: '3 años', peso: 3.5, notas: 'Reproductor reserva' },
-  { id: 'OVS-2025-0001', nombre: 'Gallina CN-01', raza: 'Castellana Negra', sexo: 'H', edad: '2 años', peso: 2.2, notas: 'Ponedora activa' },
-  { id: 'OVS-2025-0002', nombre: 'Gallina PL-01', raza: 'Prat Leonada', sexo: 'H', edad: '1 año', peso: 2.5, notas: 'Ponedora activa' },
-  { id: 'OVS-2025-0003', nombre: 'Gallina PR-01', raza: 'Plymouth Rock', sexo: 'H', edad: '2 años', peso: 2.8, notas: 'Ponedora activa' },
-  { id: 'OVS-2025-0004', nombre: 'Gallina SX-01', raza: 'Sussex', sexo: 'H', edad: '1 año', peso: 2.6, notas: 'Ponedora activa' },
-  { id: 'OVS-2025-0005', nombre: 'Gallina CN-02', raza: 'Castellana Negra', sexo: 'H', edad: '1 año', peso: 2.3, notas: 'Ponedora activa' },
-  { id: 'OVS-2025-0006', nombre: 'Gallina PL-02', raza: 'Prat Leonada', sexo: 'H', edad: '1 año', peso: 2.4, notas: 'Ponedora activa' },
-];
-
-/* ══════════════════════════════════════════════════════
-   OBJECTIVE SLIDER COMPONENT
-   ══════════════════════════════════════════════════════ */
-function ObjectiveInput({ obj, onChange }: { obj: ObjectiveSlider; onChange: (v: number) => void }) {
-  const Icon = obj.icon;
+/* ── SVG Mini Bar Chart ── */
+function MiniBarChart({ data, color = 'var(--primary)' }: { data: number[]; color?: string }) {
+  const max = Math.max(...data, 1);
   return (
-    <div style={{ background: 'white', borderRadius: 10, padding: '10px 14px', border: '1px solid var(--neutral-100)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <Icon size={14} style={{ color: obj.color }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--neutral-700)' }}>{obj.label}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: obj.color, fontFamily: 'var(--font-mono)' }}>
-          {(obj.value * 10).toFixed(0)}
-        </span>
-      </div>
-      <input
-        type="range" min={0} max={1} step={0.1} value={obj.value}
-        onChange={e => onChange(+e.target.value)}
-        style={{ width: '100%', accentColor: obj.color }}
-      />
-      <div style={{ fontSize: 10, color: 'var(--neutral-400)', marginTop: 2 }}>{obj.description}</div>
-    </div>
+    <svg width="100%" height="40" viewBox="0 0 120 40" preserveAspectRatio="none">
+      {data.map((v, i) => (
+        <rect key={i} x={i * (120 / data.length) + 1} y={40 - (v / max) * 36}
+          width={120 / data.length - 2} height={(v / max) * 36}
+          rx={2} fill={color} opacity={0.7 + (i / data.length) * 0.3} />
+      ))}
+    </svg>
   );
 }
 
-/* ══════════════════════════════════════════════════════
-   MAIN COMPONENT
-   ══════════════════════════════════════════════════════ */
-export default function GeneticsPage() {
-  const [tab, setTab] = useState<Tab>('recommender');
-  const [breeds, setBreeds] = useState<BreedSummary[]>([]);
-  const [loadingBreeds, setLoadingBreeds] = useState(true);
-
-  // Plantel from localStorage (synced with /aves)
-  const [plantel, setPlantel] = useState<PlantelAve[]>(PLANTEL_FALLBACK);
-  useEffect(() => {
-    const stored = loadPlantelFromStorage();
-    if (stored.length > 0) setPlantel(stored);
-    // Listen for storage events from /aves page
-    const handler = () => {
-      const updated = loadPlantelFromStorage();
-      if (updated.length > 0) setPlantel(updated);
-    };
-    window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
-  }, []);
-
-  // Recommender state
-  const [objectives, setObjectives] = useState<ObjectiveSlider[]>([
-    { key: 'peso_carne', label: 'Peso / Carne', icon: Target, color: '#EF4444', value: 0.5, description: 'Prioridad en peso corporal y masa muscular' },
-    { key: 'calidad_carne', label: 'Calidad Carne', icon: Sparkles, color: '#B07D2B', value: 0.8, description: 'Sabor, textura, infiltración grasa' },
-    { key: 'rendimiento_canal', label: '% Canal', icon: BarChart3, color: '#10B981', value: 0.6, description: 'Proporción de carne aprovechable' },
-    { key: 'huevos', label: 'Puesta', icon: Egg, color: '#F59E0B', value: 0.3, description: 'Producción de huevos para reproducción' },
-    { key: 'rusticidad', label: 'Rusticidad', icon: TreePine, color: '#059669', value: 0.7, description: 'Resistencia y adaptación al terreno' },
-    { key: 'docilidad', label: 'Docilidad', icon: Heart, color: '#EC4899', value: 0.6, description: 'Temperamento calmado, manejo fácil' },
-    { key: 'precocidad', label: 'Precocidad', icon: Zap, color: '#8B5CF6', value: 0.4, description: 'Velocidad de crecimiento' },
-    { key: 'plumaje_oscuro', label: 'Plumaje Oscuro', icon: Bird, color: '#374151', value: 0.5, description: 'Preferencia por plumaje oscuro' },
-    { key: 'autosuficiencia', label: 'Autosuficiencia', icon: Sun, color: '#D97706', value: 0.6, description: 'Capacidad de forrajeo y autonomía' },
-    { key: 'consanguinidad_min', label: 'Min. Consanguinidad', icon: Shield, color: '#6366F1', value: 0.8, description: 'Evitar endogamia, diversidad genética' },
-  ]);
-  const [selectedPlantel, setSelectedPlantel] = useState<string[]>(['Castellana Negra', 'Plymouth Rock Barrada', 'Bresse']);
-  const [numAves, setNumAves] = useState(100);
-  const [clima, setClima] = useState('templado');
-  const [experiencia, setExperiencia] = useState('media');
-  const [generaciones, setGeneraciones] = useState(3);
-  const [restricciones, setRestricciones] = useState('');
-
-  // Results
-  const [result, setResult] = useState<RecommendResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Chat
-  const [chatMsg, setChatMsg] = useState('');
-  const [chatHistory, setChatHistory] = useState<{ role: string; text: string }[]>([]);
-  const [chatLoading, setChatLoading] = useState(false);
-
-  /* ── Fetch breeds ── */
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/genetics/breeds-summary`);
-        if (res.ok) {
-          const data = await res.json();
-          setBreeds(data.breeds || []);
-        }
-      } catch {}
-      setLoadingBreeds(false);
-    })();
-  }, []);
-
-  /* ── Run recommendation ── */
-  const runRecommend = useCallback(async () => {
-    setLoading(true); setError(null); setResult(null);
-    const body = {
-      plantel_actual: selectedPlantel,
-      objetivos: Object.fromEntries(objectives.map(o => [o.key, o.value])),
-      num_aves_objetivo: numAves,
-      presupuesto: 'medio',
-      clima,
-      experiencia,
-      restricciones: restricciones || undefined,
-      generaciones_plan: generaciones,
-    };
-    try {
-      const res = await fetch(`${API_BASE}/api/genetics/recommend`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Error desconocido' }));
-        throw new Error(err.detail || `HTTP ${res.status}`);
-      }
-      setResult(await res.json());
-    } catch (e: any) {
-      setError(e.message);
-      // Fallback demo result
-      setResult({
-        resumen_ejecutivo: 'Demo: Recomendamos un programa de cruce F1 entre Castellana Negra × Plymouth Rock Barrada como base, con aportes de Bresse para calidad de carne. El plan a 3 generaciones maximiza vigor híbrido y calidad de capón gourmet.',
-        cruces_recomendados: [
-          { padre: 'Castellana Negra', madre: 'Plymouth Rock Barrada', tipo: 'F0×F0', objetivo: 'Base híbrida con rusticidad + masa', heterosis_estimada: 15, score_capon: 8.2, puntos_fuertes: ['Alto vigor híbrido', 'Rusticidad peninsular', 'Buen rendimiento canal'], riesgos: ['Plumaje barrado irregular'] },
-          { padre: 'Bresse', madre: 'Castellana Negra', tipo: 'F0×F0', objetivo: 'Calidad carne francesa + autóctona', heterosis_estimada: 12, score_capon: 8.8, puntos_fuertes: ['Carne excepcional', 'Piel blanca premium'], riesgos: ['Menor rusticidad que CN pura'] },
-          { padre: 'F1(CN×PR)', madre: 'Bresse', tipo: 'F1×F0', objetivo: 'Capón gourmet generación 2', heterosis_estimada: 10, score_capon: 9.1, puntos_fuertes: ['Calidad suprema', 'Base genética amplia'], riesgos: ['Segregación fenotípica F2'] },
-        ],
-        plan_parque: { reproductores_necesarios: { machos: 3, hembras: 25 }, lotes_anuales: 4, capacidad_total: 120, calendario: 'Incubaciones en Feb, Abr, Jun, Sep — capones para Navidad y primavera' },
-        consanguinidad: { riesgo: 'bajo', coeficiente_estimado: 0.03, recomendaciones: ['Mantener 3+ líneas paternas activas', 'Rotar gallos cada 2 generaciones', 'Introducir sangre nueva de Mos o Euskal Oiloa cada 3 años'] },
-        roadmap_f1_f5: [
-          { generacion: 'F1', cruce: 'CN × Plymouth Rock', objetivo: 'Vigor híbrido máximo', seleccion: 'Machos >3.2kg a 6 meses, plumaje oscuro' },
-          { generacion: 'F2', cruce: 'F1(CN×PR) × Bresse', objetivo: 'Incorporar calidad carne francesa', seleccion: 'Carcasa >74%, piel blanca' },
-          { generacion: 'F3', cruce: 'F2 × CN (retrocruce)', objetivo: 'Fijar rusticidad + autóctona', seleccion: 'Autosuficiencia, resist. enfermedades' },
-        ],
-        nutricion_clave: 'F1: Inicio con 22% proteína. Engorde: mezcla 70% cereal + 15% soja + 15% pasto. Capones: dieta acabado con maíz 30 días pre-sacrificio.',
-        timeline_meses: [
-          { mes: 1, accion: 'Seleccionar reproductores' },
-          { mes: 2, accion: 'Primera incubación CN × PR' },
-          { mes: 5, accion: 'Sexado y separación pollitos' },
-          { mes: 6, accion: 'Caponaje machos seleccionados' },
-          { mes: 12, accion: 'Venta primeros capones' },
-        ],
-      });
-    }
-    setLoading(false);
-  }, [selectedPlantel, objectives, numAves, clima, experiencia, restricciones, generaciones]);
-
-  /* ── Chat ── */
-  const sendChat = useCallback(async () => {
-    if (!chatMsg.trim()) return;
-    const msg = chatMsg.trim();
-    setChatMsg('');
-    setChatHistory(h => [...h, { role: 'user', text: msg }]);
-    setChatLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/genetics/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setChatHistory(h => [...h, { role: 'assistant', text: data.response }]);
-      } else {
-        setChatHistory(h => [...h, { role: 'assistant', text: '⚠️ Error conectando con IA. Verifica ANTHROPIC_API_KEY en el backend.' }]);
-      }
-    } catch {
-      setChatHistory(h => [...h, { role: 'assistant', text: '⚠️ Backend no disponible. Verifica que el servidor API esté activo.' }]);
-    }
-    setChatLoading(false);
-  }, [chatMsg]);
-
-  const updateObjective = (key: string, value: number) => {
-    setObjectives(prev => prev.map(o => o.key === key ? { ...o, value } : o));
-  };
-
-  const togglePlantel = (name: string) => {
-    setSelectedPlantel(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
-  };
+/* ── SVG Generational River ── */
+function GenerationalRiver({ birds }: { birds: BirdType[] }) {
+  const gens = ['F0', 'F1', 'F2', 'F3', 'F4', 'F5'];
+  const counts = gens.map(g => birds.filter(b => b.generacion === g).length);
+  const max = Math.max(...counts, 1);
+  const w = 600, h = 80;
 
   return (
-    <div className="nf-content" style={{ padding: 20 }}>
+    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet"
+      style={{ borderRadius: 8, background: 'rgba(var(--primary-rgb,180,130,50),0.05)' }}>
+      <defs>
+        <linearGradient id="river-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.3" />
+        </linearGradient>
+      </defs>
+      {counts.map((c, i) => {
+        const x = (i / gens.length) * w + 50;
+        const r = Math.max(8, (c / max) * 30);
+        return (
+          <g key={gens[i]}>
+            {i > 0 && (
+              <line x1={((i - 1) / gens.length) * w + 50 + Math.max(8, (counts[i - 1] / max) * 30)}
+                y1={h / 2} x2={x - r} y2={h / 2}
+                stroke="var(--primary)" strokeWidth={2} strokeDasharray="4 2" opacity={0.3} />
+            )}
+            <circle cx={x} cy={h / 2} r={r} fill={c > 0 ? 'url(#river-grad)' : 'rgba(120,120,120,0.1)'}
+              stroke={c > 0 ? 'var(--primary)' : 'rgba(120,120,120,0.3)'} strokeWidth={1.5} />
+            <text x={x} y={h / 2 + 1} textAnchor="middle" dominantBaseline="middle"
+              fontSize={c > 0 ? 11 : 9} fontWeight={600}
+              fill={c > 0 ? 'var(--primary)' : 'rgba(120,120,120,0.5)'}>{c > 0 ? c : '—'}</text>
+            <text x={x} y={h / 2 + r + 14} textAnchor="middle" fontSize={9} fill="var(--neutral-400)">
+              {gens[i]}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ── Alert Badge ── */
+function AlertBadge({ severity }: { severity: string }) {
+  const colors: Record<string, string> = {
+    critical: '#DC2626', warning: '#F59E0B', info: '#3B82F6', success: '#16A34A',
+  };
+  return <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: colors[severity] || '#888', marginRight: 6, flexShrink: 0, marginTop: 4 }} />;
+}
+
+/* ── Quick Nav Card ── */
+function QuickNav({ href, Icon, label, desc, badge }: { href: string; Icon: any; label: string; desc: string; badge?: string }) {
+  return (
+    <Link href={href} className="nf-card" style={{ textDecoration: 'none', display: 'flex', gap: 12, alignItems: 'center', padding: '12px 16px', transition: 'all 0.15s', cursor: 'pointer' }}>
+      <div style={{ background: 'rgba(var(--primary-rgb,180,130,50),0.1)', borderRadius: 8, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon size={18} style={{ color: 'var(--primary)' }} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-100)' }}>{label}</div>
+        <div style={{ fontSize: 11, color: 'var(--neutral-400)', marginTop: 1 }}>{desc}</div>
+      </div>
+      {badge && <span className="nf-tag" style={{ fontSize: 10 }}>{badge}</span>}
+      <ChevronRight size={14} style={{ color: 'var(--neutral-500)', flexShrink: 0 }} />
+    </Link>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ *  MAIN — Selection Command Center
+ * ══════════════════════════════════════════════════════════════════ */
+
+export default function GeneticsCommandCenter() {
+  const [prog, setProg] = useState<SelectionProgram | null>(null);
+
+  useEffect(() => { setProg(loadProgram()); }, []);
+
+  const stats = useMemo(() => prog ? programStats(prog) : null, [prog]);
+
+  /* Alerts */
+  const alerts = useMemo<SelectionAlert[]>(() => {
+    if (!prog) return [];
+    const a: SelectionAlert[] = [];
+    const f2Pending = prog.birds.filter(b => b.generacion === 'F2' && b.estadoSeleccion === 'pendiente');
+    if (f2Pending.length > 10) {
+      a.push({ id: 'a1', tipo: 'evaluacion_pendiente', severidad: 'warning', titulo: 'Evaluaciones pendientes',
+        descripcion: `${f2Pending.length} aves F2 pendientes de evaluación`, fecha: new Date().toISOString().slice(0, 10) });
+    }
+    const activePairs = prog.breedingPairs.filter(bp => bp.activo);
+    for (const bp of activePairs) {
+      const coi = estimateOffspringCOI(bp.machoId, bp.hembraId, prog.birds);
+      if (coi > 0.0625) {
+        a.push({ id: `a-coi-${bp.id}`, tipo: 'consanguinidad_alta', severidad: 'danger', titulo: 'COI elevado',
+          descripcion: `Pareja ${bp.machoId} × ${bp.hembraId} tiene COI ${(coi * 100).toFixed(1)}%`, fecha: new Date().toISOString().slice(0, 10) });
+      }
+    }
+    if (activePairs.length < 2) {
+      a.push({ id: 'a-bp', tipo: 'deficit_reproductores', severidad: 'info', titulo: 'Pocas parejas',
+        descripcion: `Solo ${activePairs.length} pareja(s) activa(s). Considerar nuevos cruces.`, fecha: new Date().toISOString().slice(0, 10) });
+    }
+    return a;
+  }, [prog]);
+
+  /* Top F2 by score */
+  const topF2 = useMemo(() => {
+    if (!prog) return [];
+    const f2 = prog.birds.filter(b => b.generacion === 'F2' && b.estadoSeleccion !== 'descartado');
+    return rankBirds(f2, prog.birds, prog.measurements, prog.evaluations, prog.selectionWeights).slice(0, 5);
+  }, [prog]);
+
+  /* Trait progress */
+  const traitProgress = useMemo(() => {
+    if (!prog) return [];
+    const latestGen = ['F2', 'F1', 'F0'].find(g => prog.traitTracking.some(t => t.generacion === g)) || 'F0';
+    return prog.traitTracking.filter(t => t.generacion === latestGen).sort((a, b) => b.porcentajeFijacion - a.porcentajeFijacion);
+  }, [prog]);
+
+  if (!prog || !stats) return <div style={{ padding: 32, color: 'var(--neutral-400)' }}>Cargando programa…</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: 4 }}>
       {/* Header */}
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--neutral-900)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Dna size={22} style={{ color: 'var(--primary-500)' }} />
-          Genética — Recomendador IA
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--neutral-500)', margin: '4px 0 0' }}>
-          Plan genético inteligente con Claude AI · {breeds.length} razas disponibles
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ background: 'linear-gradient(135deg, var(--primary), #8B5CF6)', borderRadius: 12, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Dna size={22} color="#fff" />
+        </div>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--neutral-100)' }}>
+            {prog.nombre}
+          </h1>
+          <div style={{ fontSize: 12, color: 'var(--neutral-400)' }}>
+            {prog.descripcion}
+          </div>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <span className="nf-tag" style={{ background: 'rgba(var(--primary-rgb,180,130,50),0.15)', color: 'var(--primary)' }}>
+            {prog.perfilObjetivo}
+          </span>
+          <span className="nf-tag">{prog.ubicacion}</span>
+        </div>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '2px solid var(--neutral-100)' }}>
-        {([
-          { key: 'plantel' as Tab, label: 'Mi Plantel', icon: Bird },
-          { key: 'recommender' as Tab, label: 'Recomendador IA', icon: Sparkles },
-        ]).map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{
-            padding: '10px 16px', fontSize: 13, fontWeight: tab === t.key ? 700 : 500,
-            color: tab === t.key ? 'var(--primary-600)' : 'var(--neutral-500)',
-            background: 'none', border: 'none', borderBottom: tab === t.key ? '2px solid var(--primary-500)' : '2px solid transparent',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-            marginBottom: -2,
-          }}>
-            <t.icon size={14} /> {t.label}
-          </button>
+      {/* KPI Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+        {[
+          { label: 'Aves Activas', value: stats.activeBirds, icon: Bird, color: 'var(--primary)' },
+          { label: 'Machos / Hembras', value: `${stats.males} / ${stats.females}`, icon: Users, color: '#3B82F6' },
+          { label: 'Parejas Activas', value: stats.breedingPairsActive, icon: Heart, color: '#EC4899' },
+          { label: 'Razas Base', value: stats.breeds, icon: Layers, color: '#8B5CF6' },
+          { label: 'Evaluaciones', value: stats.evaluations, icon: Target, color: '#16A34A' },
+        ].map(kpi => (
+          <div key={kpi.label} className="nf-kbox">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <kpi.icon size={14} style={{ color: kpi.color }} />
+              <span style={{ fontSize: 11, color: 'var(--neutral-400)' }}>{kpi.label}</span>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--neutral-100)' }}>{kpi.value}</div>
+          </div>
         ))}
       </div>
 
-      {/* ═══════════ PLANTEL TAB ═══════════ */}
-      {tab === 'plantel' && (
-        <div>
-          {/* Source info */}
-          <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 8, fontSize: 12, background: 'rgba(176,125,43,0.06)', border: '1px solid rgba(176,125,43,0.15)', color: 'var(--neutral-600)', display: 'flex', alignItems: 'center', gap: 8 }}>
-            🧬 Mostrando aves con estado <strong style={{ color: '#B07D2B' }}>Reproductor</strong> del inventario.
-            <a href="/aves" style={{ marginLeft: 'auto', color: '#B07D2B', fontWeight: 600, textDecoration: 'none' }}>Ir a Inventario →</a>
-          </div>
-          {/* KPIs */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-            {[
-              { v: plantel.length, l: 'Total aves', c: 'var(--primary-600)', e: '🐔' },
-              { v: plantel.filter(a => a.sexo === 'M').length, l: 'Machos', c: '#3B82F6', e: '♂' },
-              { v: plantel.filter(a => a.sexo === 'H').length, l: 'Hembras', c: '#EC4899', e: '♀' },
-              { v: [...new Set(plantel.map(a => a.raza))].length, l: 'Razas', c: '#8B5CF6', e: '🧬' },
-            ].map(k => (
-              <div key={k.l} style={{ background: 'white', borderRadius: 10, padding: '10px 16px', border: '1px solid var(--neutral-100)', minWidth: 100 }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: k.c, fontFamily: 'var(--font-mono)' }}>{k.e} {k.v}</div>
-                <div style={{ fontSize: 11, color: 'var(--neutral-500)' }}>{k.l}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Plantel table */}
-          <div style={{ background: 'white', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--neutral-100)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--neutral-50)', borderBottom: '2px solid var(--neutral-100)' }}>
-                  {['ID', 'Nombre', 'Raza', 'Sexo', 'Edad', 'Peso', 'Notas'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: 'var(--neutral-600)', fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {plantel.map(a => (
-                  <tr key={a.id} style={{ borderBottom: '1px solid var(--neutral-50)' }}>
-                    <td style={{ padding: '8px 12px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--neutral-400)' }}>{a.id}</td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--neutral-800)' }}>{a.nombre}</td>
-                    <td style={{ padding: '8px 12px', color: 'var(--neutral-600)' }}>{a.raza}</td>
-                    <td style={{ padding: '8px 12px' }}>
-                      <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: a.sexo === 'M' ? '#DBEAFE' : '#FCE7F3', color: a.sexo === 'M' ? '#2563EB' : '#DB2777' }}>
-                        {a.sexo === 'M' ? '♂ Macho' : '♀ Hembra'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--neutral-500)' }}>{a.edad}</td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--neutral-800)', fontFamily: 'var(--font-mono)' }}>{a.peso} kg</td>
-                    <td style={{ padding: '8px 12px', fontSize: 11, color: 'var(--neutral-500)' }}>{a.notas}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* CTA to recommender */}
-          <div style={{ marginTop: 16, textAlign: 'center' }}>
-            <button onClick={() => setTab('recommender')} className="nf-btn primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Sparkles size={14} /> Obtener recomendación IA para mi plantel
-            </button>
-          </div>
+      {/* Generational River */}
+      <div className="nf-card">
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--neutral-200)' }}>
+          <TrendingUp size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
+          Río Generacional
         </div>
-      )}
-
-      {/* ═══════════ RECOMMENDER TAB ═══════════ */}
-      {tab === 'recommender' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 20 }}>
-          {/* Left panel — Configuration */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignSelf: 'start' }}>
-            {/* Objective sliders */}
-            <div style={{
-              background: 'white', borderRadius: 14, padding: 16,
-              border: '1px solid var(--neutral-100)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <Sliders size={14} style={{ color: 'var(--primary-500)' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>Objetivos (0-10)</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {objectives.map(obj => (
-                  <ObjectiveInput key={obj.key} obj={obj} onChange={v => updateObjective(obj.key, v)} />
-                ))}
-              </div>
-            </div>
-
-            {/* Plantel selection */}
-            <div style={{
-              background: 'white', borderRadius: 14, padding: 16,
-              border: '1px solid var(--neutral-100)',
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)', marginBottom: 8 }}>
-                🐔 Plantel actual
-              </div>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxHeight: 180, overflowY: 'auto' }}>
-                {(breeds.length > 0 ? breeds : [
-                  { name: 'Castellana Negra' }, { name: 'Plymouth Rock Barrada' }, { name: 'Bresse' },
-                  { name: 'Sulmtaler' }, { name: 'Mos' }, { name: 'Prat Leonada' },
-                  { name: 'Euskal Oiloa' }, { name: 'Sussex' }, { name: 'Orpington' },
-                ] as any[]).map(b => (
-                  <button key={b.name} onClick={() => togglePlantel(b.name)} style={{
-                    padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 600,
-                    background: selectedPlantel.includes(b.name) ? 'var(--primary-500)' : 'var(--neutral-50)',
-                    color: selectedPlantel.includes(b.name) ? 'white' : 'var(--neutral-600)',
-                    border: selectedPlantel.includes(b.name) ? '1px solid var(--primary-600)' : '1px solid var(--neutral-200)',
-                    cursor: 'pointer',
-                  }}>
-                    {b.name}
-                  </button>
-                ))}
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--neutral-400)', marginTop: 6 }}>
-                Seleccionadas: {selectedPlantel.length} razas
-              </div>
-            </div>
-
-            {/* Parameters */}
-            <div style={{
-              background: 'white', borderRadius: 14, padding: 16,
-              border: '1px solid var(--neutral-100)',
-            }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)', marginBottom: 12 }}>⚙️ Parámetros</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-500)', display: 'block', marginBottom: 4 }}>Nº aves objetivo</label>
-                  <input className="nf-input" type="number" min={10} max={1000} value={numAves} onChange={e => setNumAves(+e.target.value)} style={{ width: '100%' }} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-500)', display: 'block', marginBottom: 4 }}>Clima</label>
-                    <select className="nf-input" value={clima} onChange={e => setClima(e.target.value)} style={{ width: '100%' }}>
-                      {['cálido', 'templado', 'frío', 'húmedo'].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-500)', display: 'block', marginBottom: 4 }}>Experiencia</label>
-                    <select className="nf-input" value={experiencia} onChange={e => setExperiencia(e.target.value)} style={{ width: '100%' }}>
-                      {['principiante', 'media', 'experta'].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-500)', display: 'block', marginBottom: 4 }}>Generaciones (1-5)</label>
-                  <input className="nf-input" type="number" min={1} max={5} value={generaciones} onChange={e => setGeneraciones(+e.target.value)} style={{ width: '100%' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-500)', display: 'block', marginBottom: 4 }}>Restricciones (opcional)</label>
-                  <input className="nf-input" value={restricciones} onChange={e => setRestricciones(e.target.value)} placeholder="Ej: solo razas españolas, sin Cornish..." style={{ width: '100%' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Generate button */}
-            <button
-              onClick={runRecommend} disabled={loading}
-              className="nf-btn primary"
-              style={{ width: '100%', padding: '14px 0', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.6 : 1 }}
-            >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-              {loading ? 'Claude analizando...' : 'Generar Plan Genético IA'}
-            </button>
-          </div>
-
-          {/* Right panel — Results */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {error && (
-              <div style={{
-                background: '#FEF2F2', borderRadius: 10, padding: 12,
-                border: '1px solid #FECACA', fontSize: 12, color: '#991B1B',
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <AlertTriangle size={14} /> {error}
-                <span style={{ fontSize: 10, color: '#B91C1C' }}>(mostrando resultado demo)</span>
-              </div>
-            )}
-
-            {!result && !loading && (
-              <div style={{
-                background: 'white', borderRadius: 14, padding: 48, textAlign: 'center',
-                border: '1px solid var(--neutral-100)',
-              }}>
-                <Sparkles size={40} style={{ color: 'var(--neutral-300)', marginBottom: 12 }} />
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--neutral-500)' }}>Configura objetivos y lanza el análisis</div>
-                <div style={{ fontSize: 12, color: 'var(--neutral-400)', marginTop: 6 }}>
-                  Claude analizará las {breeds.length || 42} razas disponibles y generará un plan genético completo personalizado
-                </div>
-              </div>
-            )}
-
-            {loading && (
-              <div style={{
-                background: 'white', borderRadius: 14, padding: 48, textAlign: 'center',
-                border: '1px solid var(--neutral-100)',
-              }}>
-                <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary-500)', marginBottom: 12 }} />
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--neutral-700)' }}>Claude está analizando tu plantel...</div>
-                <div style={{ fontSize: 12, color: 'var(--neutral-400)', marginTop: 6 }}>Evaluando {selectedPlantel.length} razas × 10 objetivos × {generaciones} generaciones</div>
-              </div>
-            )}
-
-            {result && (
-              <>
-                {/* Executive Summary */}
-                {result.resumen_ejecutivo && (
-                  <div style={{
-                    background: 'linear-gradient(145deg, #FFFBEB, #FEF3C7)', borderRadius: 14, padding: 18,
-                    border: '1px solid #FDE68A',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <BookOpen size={14} style={{ color: '#B07D2B' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#92400E' }}>Resumen Ejecutivo</span>
-                    </div>
-                    <p style={{ fontSize: 13, lineHeight: 1.7, color: '#78350F', margin: 0 }}>{result.resumen_ejecutivo}</p>
-                  </div>
-                )}
-
-                {/* Recommended Crosses */}
-                {result.cruces_recomendados && result.cruces_recomendados.length > 0 && (
-                  <div style={{
-                    background: 'white', borderRadius: 14, overflow: 'hidden',
-                    border: '1px solid var(--neutral-100)',
-                  }}>
-                    <div style={{ padding: '12px 16px', borderBottom: '2px solid var(--primary-500)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Dna size={16} style={{ color: 'var(--primary-500)' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>Cruces Recomendados</span>
-                    </div>
-                    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {result.cruces_recomendados.map((c: any, i: number) => (
-                        <div key={i} style={{
-                          background: 'var(--neutral-25)', borderRadius: 10, padding: 14,
-                          border: '1px solid var(--neutral-100)',
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                            <span style={{
-                              background: 'var(--primary-500)', color: 'white', width: 24, height: 24,
-                              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 12, fontWeight: 800,
-                            }}>
-                              {i + 1}
-                            </span>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--neutral-800)' }}>
-                              {c.padre} × {c.madre}
-                            </span>
-                            <span style={{
-                              marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px',
-                              borderRadius: 6, background: '#ECFDF5', color: '#059669',
-                            }}>
-                              {c.tipo}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--neutral-600)', marginBottom: 8 }}>{c.objetivo}</div>
-                          <div style={{ display: 'flex', gap: 12, fontSize: 12, marginBottom: 8 }}>
-                            <span style={{ color: '#059669', fontWeight: 700 }}>
-                              +{c.heterosis_estimada}% heterosis
-                            </span>
-                            <span style={{ color: '#B07D2B', fontWeight: 700 }}>
-                              Score capón: {c.score_capon}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            {c.puntos_fuertes?.map((p: string, j: number) => (
-                              <span key={j} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#ECFDF5', color: '#059669' }}>✅ {p}</span>
-                            ))}
-                            {c.riesgos?.map((r: string, j: number) => (
-                              <span key={j} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#FEF2F2', color: '#991B1B' }}>⚠️ {r}</span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Park Plan */}
-                {result.plan_parque && (
-                  <div style={{
-                    background: 'white', borderRadius: 14, padding: 16,
-                    border: '1px solid var(--neutral-100)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                      <Map size={14} style={{ color: '#10B981' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>Plan de Parque</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
-                      {[
-                        { l: 'Machos', v: result.plan_parque.reproductores_necesarios?.machos || '—', c: '#3B82F6' },
-                        { l: 'Hembras', v: result.plan_parque.reproductores_necesarios?.hembras || '—', c: '#EC4899' },
-                        { l: 'Lotes/año', v: result.plan_parque.lotes_anuales || '—', c: '#F59E0B' },
-                        { l: 'Capacidad', v: result.plan_parque.capacidad_total || '—', c: '#10B981' },
-                      ].map(k => (
-                        <div key={k.l} style={{ textAlign: 'center', background: 'var(--neutral-25)', borderRadius: 8, padding: '8px 6px' }}>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: k.c, fontFamily: 'var(--font-mono)' }}>{k.v}</div>
-                          <div style={{ fontSize: 10, color: 'var(--neutral-500)' }}>{k.l}</div>
-                        </div>
-                      ))}
-                    </div>
-                    {result.plan_parque.calendario && (
-                      <div style={{ fontSize: 12, color: 'var(--neutral-600)', lineHeight: 1.5, background: 'var(--neutral-25)', borderRadius: 8, padding: 10 }}>
-                        📅 {result.plan_parque.calendario}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Consanguinity */}
-                {result.consanguinidad && (
-                  <div style={{
-                    background: 'white', borderRadius: 14, padding: 16,
-                    border: '1px solid var(--neutral-100)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                      <Shield size={14} style={{ color: '#6366F1' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>Control de Consanguinidad</span>
-                      <span style={{
-                        marginLeft: 'auto', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
-                        background: result.consanguinidad.riesgo === 'bajo' ? '#ECFDF5' : result.consanguinidad.riesgo === 'medio' ? '#FEF3C7' : '#FEF2F2',
-                        color: result.consanguinidad.riesgo === 'bajo' ? '#059669' : result.consanguinidad.riesgo === 'medio' ? '#D97706' : '#DC2626',
-                      }}>
-                        Riesgo: {result.consanguinidad.riesgo}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--neutral-600)', marginBottom: 8 }}>
-                      Coeficiente estimado: <strong>{result.consanguinidad.coeficiente_estimado}</strong>
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--neutral-600)', lineHeight: 1.8 }}>
-                      {result.consanguinidad.recomendaciones?.map((r: string, i: number) => (
-                        <li key={i}>{r}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Roadmap F1-F5 */}
-                {result.roadmap_f1_f5 && result.roadmap_f1_f5.length > 0 && (
-                  <div style={{
-                    background: 'white', borderRadius: 14, overflow: 'hidden',
-                    border: '1px solid var(--neutral-100)',
-                  }}>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--neutral-100)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <ArrowRight size={14} style={{ color: '#8B5CF6' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>Roadmap Generacional</span>
-                    </div>
-                    <div style={{ padding: 16 }}>
-                      {/* Pipeline visual */}
-                      <div style={{ display: 'flex', gap: 0, overflowX: 'auto', paddingBottom: 8 }}>
-                        {result.roadmap_f1_f5.map((gen: any, i: number) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
-                            <div style={{
-                              minWidth: 160, background: `hsl(${260 + i * 20}, 70%, 96%)`,
-                              borderRadius: 10, padding: 12,
-                              border: `1px solid hsl(${260 + i * 20}, 50%, 80%)`,
-                            }}>
-                              <div style={{ fontSize: 14, fontWeight: 800, color: `hsl(${260 + i * 20}, 60%, 40%)`, marginBottom: 4 }}>
-                                {gen.generacion}
-                              </div>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--neutral-700)', marginBottom: 4 }}>{gen.cruce}</div>
-                              <div style={{ fontSize: 10, color: 'var(--neutral-500)', marginBottom: 4 }}>{gen.objetivo}</div>
-                              <div style={{ fontSize: 9, color: 'var(--neutral-400)', fontStyle: 'italic' }}>{gen.seleccion}</div>
-                            </div>
-                            {i < result.roadmap_f1_f5!.length - 1 && (
-                              <ChevronRight size={20} style={{ color: 'var(--neutral-300)', flexShrink: 0, margin: '0 4px' }} />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Nutrition */}
-                {result.nutricion_clave && (
-                  <div style={{
-                    background: '#F0FDF4', borderRadius: 10, padding: 14,
-                    border: '1px solid #BBF7D0',
-                  }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 4 }}>🌾 Nutrición Clave</div>
-                    <p style={{ fontSize: 12, color: '#15803D', lineHeight: 1.6, margin: 0 }}>{result.nutricion_clave}</p>
-                  </div>
-                )}
-
-                {/* Timeline */}
-                {result.timeline_meses && result.timeline_meses.length > 0 && (
-                  <div style={{
-                    background: 'white', borderRadius: 14, padding: 16,
-                    border: '1px solid var(--neutral-100)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                      <Calendar size={14} style={{ color: '#D97706' }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>Timeline</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 8 }}>
-                      {result.timeline_meses.map((t: any, i: number) => (
-                        <div key={i} style={{
-                          minWidth: 120, background: 'var(--neutral-25)', borderRadius: 8, padding: 10,
-                          borderLeft: '3px solid var(--primary-500)',
-                        }}>
-                          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--primary-600)' }}>Mes {t.mes}</div>
-                          <div style={{ fontSize: 11, color: 'var(--neutral-600)', marginTop: 2 }}>{t.accion}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Raw response (if parse failed) */}
-                {result.parse_error && result.raw_response && (
-                  <div style={{
-                    background: 'var(--neutral-25)', borderRadius: 10, padding: 14,
-                    border: '1px solid var(--neutral-200)', fontSize: 12,
-                  }}>
-                    <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--neutral-700)' }}>Respuesta sin procesar:</div>
-                    <pre style={{ whiteSpace: 'pre-wrap', color: 'var(--neutral-600)', maxHeight: 300, overflowY: 'auto' }}>{result.raw_response}</pre>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ── Seedy Chat panel ── */}
-            <div style={{
-              background: 'white', borderRadius: 14, padding: 16,
-              border: '1px solid var(--neutral-100)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <Bot size={14} style={{ color: '#10B981' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--neutral-800)' }}>Seedy 🌱 — Chat Genético</span>
-              </div>
-
-              {/* Chat history */}
-              <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {chatHistory.length === 0 && (
-                  <div style={{ fontSize: 12, color: 'var(--neutral-400)', textAlign: 'center', padding: 12 }}>
-                    Pregunta sobre genética avícola, cruces, consanguinidad...
-                  </div>
-                )}
-                {chatHistory.map((msg, i) => (
-                  <div key={i} style={{
-                    alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                    maxWidth: '85%', padding: '8px 12px', borderRadius: 10,
-                    background: msg.role === 'user' ? 'var(--primary-500)' : 'var(--neutral-50)',
-                    color: msg.role === 'user' ? 'white' : 'var(--neutral-700)',
-                    fontSize: 12, lineHeight: 1.5,
-                  }}>
-                    {msg.text}
-                  </div>
-                ))}
-                {chatLoading && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--neutral-400)' }}>
-                    <Loader2 size={12} className="animate-spin" /> Seedy pensando...
-                  </div>
-                )}
-              </div>
-
-              {/* Chat input */}
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input
-                  className="nf-input" value={chatMsg}
-                  onChange={e => setChatMsg(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendChat()}
-                  placeholder="¿Qué raza va mejor con Castellana Negra?"
-                  style={{ flex: 1 }}
-                />
-                <button onClick={sendChat} disabled={chatLoading || !chatMsg.trim()} className="nf-btn primary" style={{ padding: '8px 12px' }}>
-                  <Send size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
+        <GenerationalRiver birds={prog.birds} />
+        <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: 'var(--neutral-400)' }}>
+          {Object.entries(stats.byGeneration).map(([gen, count]) => (
+            <span key={gen}>{gen}: <b style={{ color: 'var(--neutral-200)' }}>{count}</b> activas</span>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* Two column: Alerts + Top Birds */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {/* Alerts */}
+        <div className="nf-card">
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+            <AlertTriangle size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
+            Alertas del Programa
+          </div>
+          {alerts.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--neutral-500)', padding: 12, textAlign: 'center' }}>
+              Sin alertas activas ✓
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {alerts.map(a => (
+                <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: '6px 8px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
+                  <AlertBadge severity={a.severidad} />
+                  <span style={{ fontSize: 12, color: 'var(--neutral-300)', lineHeight: 1.4 }}>{a.descripcion}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Top F2 */}
+        <div className="nf-card">
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+            <Sparkles size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
+            Top 5 F2 por Score
+          </div>
+          {topF2.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--neutral-500)', padding: 12, textAlign: 'center' }}>
+              Sin aves F2 evaluadas
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {topF2.map((r, i) => (
+                <Link key={r.id} href={`/genetics/birds/${r.id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 6, textDecoration: 'none', fontSize: 12, transition: 'background 0.15s' }}>
+                  <span style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: i === 0 ? 'var(--primary)' : 'var(--neutral-700)', color: i === 0 ? '#fff' : 'var(--neutral-300)', fontSize: 10, fontWeight: 700 }}>
+                    {i + 1}
+                  </span>
+                  <span style={{ color: 'var(--neutral-200)', fontWeight: 500 }}>{r.anilla}</span>
+                  <span style={{ color: 'var(--neutral-400)' }}>{r.sexo === 'M' ? '♂' : '♀'} {r.pesoActual}kg</span>
+                  <span style={{ marginLeft: 'auto', fontWeight: 700, color: r.score >= 70 ? '#16A34A' : r.score >= 50 ? '#F59E0B' : '#DC2626' }}>
+                    {r.score.toFixed(0)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Trait Lock Board Summary */}
+      <div className="nf-card">
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+          <Shield size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
+          Progreso de Fijación de Rasgos
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+          {traitProgress.map(t => {
+            const trait = prog.traits.find(td => td.id === t.traitId);
+            const levelColors: Record<string, string> = { emergent: '#F59E0B', unstable: '#3B82F6', almost_fixed: '#8B5CF6', fixed: '#16A34A', lost: '#DC2626' };
+            return (
+              <div key={t.traitId} style={{ padding: '8px 10px', borderRadius: 6, background: 'rgba(var(--primary-rgb,180,130,50),0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--neutral-200)' }}>{trait?.nombre || t.traitId}</span>
+                  <span style={{ fontSize: 10, color: levelColors[t.nivel] || '#888', fontWeight: 600 }}>
+                    {t.nivel === 'emergent' ? 'Emergente' : t.nivel === 'unstable' ? 'Inestable' : t.nivel === 'almost_fixed' ? 'Casi fijo' : t.nivel === 'fixed' ? 'Fijado' : 'Perdido'}
+                  </span>
+                </div>
+                <div style={{ background: 'var(--neutral-800)', borderRadius: 3, height: 6, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${t.porcentajeFijacion}%`, background: levelColors[t.nivel], borderRadius: 3, transition: 'width 0.3s' }} />
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--neutral-500)', marginTop: 2 }}>{t.porcentajeFijacion}%</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Navigation Grid */}
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--neutral-200)' }}>
+          <LayoutGrid size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
+          Módulos del Programa
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+          <QuickNav href="/genetics/birds" Icon={Bird} label="Registro de Aves" desc="Censo, fichas, filtros avanzados" badge={`${stats.totalBirds}`} />
+          <QuickNav href="/genetics/mate-canvas" Icon={Heart} label="Mate Canvas" desc="Planificar cruces con drag & drop" badge={`${stats.breedingPairsActive} activos`} />
+          <QuickNav href="/simulator/growth-lab" Icon={TrendingUp} label="Growth Lab" desc="Curvas Gompertz, predicción de peso" />
+          <QuickNav href="/genetics/generations" Icon={Layers} label="Generaciones" desc="Dashboard F0→F5, progreso por gen" />
+          <QuickNav href="/genetics/inbreeding" Icon={Shield} label="Observatorio COI" desc="Consanguinidad, mapa de calor" />
+          <QuickNav href="/genetics/quick-entry" Icon={ClipboardList} label="Entrada Rápida" desc="Pesajes, evaluaciones, eventos" />
+          <QuickNav href="/genetics/catalog" Icon={BookOpen} label="Catálogo" desc="Razas heritage, parámetros zootécnicos" />
+          <QuickNav href="/genetics/recommender" Icon={Sparkles} label="Cruces IA" desc="Recomendador inteligente de cruces" />
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   BarChart3, Egg, Home, Heart, FlaskConical, Package,
   ClipboardList, FileText, Wifi, Settings, LogOut, User,
-  Calendar, Dna, Camera, Leaf, BookOpen, MessageCircle, type LucideIcon
+  Calendar, Dna, Camera, Leaf, BookOpen, MessageCircle,
+  Bird, TrendingUp, Layers, Shield, type LucideIcon
 } from 'lucide-react';
 
 interface NavItem { href: string; label: string; Icon: LucideIcon; badge?: string }
@@ -25,8 +26,16 @@ const NAV: NavSection[] = [
   {
     label: 'Genética',
     items: [
-      { href: '/genetics',     label: 'Cruces IA',      Icon: Dna },
-      { href: '/simulator',    label: 'Simulador Fotos', Icon: Camera },
+      { href: '/genetics',           label: 'Programa',         Icon: Dna,          badge: 'OS' },
+      { href: '/genetics/birds',     label: 'Registro Aves',    Icon: Bird },
+      { href: '/genetics/mate-canvas', label: 'Mate Canvas',    Icon: Heart },
+      { href: '/simulator/growth-lab', label: 'Growth Lab',     Icon: TrendingUp },
+      { href: '/genetics/generations', label: 'Generaciones',   Icon: Layers },
+      { href: '/genetics/inbreeding', label: 'COI',             Icon: Shield },
+      { href: '/genetics/quick-entry', label: 'Entrada Rápida', Icon: ClipboardList },
+      { href: '/genetics/catalog',   label: 'Catálogo',         Icon: BookOpen },
+      { href: '/genetics/recommender', label: 'Cruces IA',      Icon: Camera },
+      { href: '/simulator',          label: 'Simulador Fotos',  Icon: Camera },
     ],
   },
   {
