@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   // If already logged in, redirect
   if (isAuthenticated) {
-    router.replace('/dashboard');
+    router.replace('/farms');
     return null;
   }
 
@@ -28,7 +28,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (success) {
-      router.replace('/dashboard');
+      router.replace('/farms');
     } else {
       setError('Email o contraseña incorrectos');
     }

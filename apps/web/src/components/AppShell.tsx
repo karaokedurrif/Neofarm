@@ -5,9 +5,11 @@ import Sidebar from './Sidebar';
 import StatusBar from './dashboard/StatusBar';
 import SeedyChat from './SeedyChat';
 
-const NO_SHELL = ['/', '/login', '/register', '/wizard'];
+const NO_SHELL = ['/', '/login', '/register', '/wizard', '/farms'];
 
 function isNoShell(p: string) {
+  // Farm tenant pages have their own shell
+  if (p.startsWith('/farm/')) return true;
   return NO_SHELL.some(x => x === '/' ? p === '/' : p === x || p.startsWith(x + '/'));
 }
 
