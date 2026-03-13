@@ -68,11 +68,12 @@ export function calculateSelectionScore(
   // 6. Uniformidad (placeholder based on conformación variance)
   breakdown.push({ criterio: 'uniformidad', valor: 50, pesado: 0 });
 
-  // 7. Valor genético (based on descendants' scores)
+  // 7. Valor genético (based on descendants' scores; founders get baseline credit)
   const descendants = allBirds.filter(b => b.padreId === bird.id || b.madreId === bird.id);
+  const isFounder = bird.generacion === 'F0' || bird.origen === 'fundador';
   const valorGenetico = descendants.length > 0
     ? Math.min(100, 40 + descendants.length * 5)
-    : 30;
+    : isFounder ? 60 : 30; // Founders carry base genetic value even without descendants yet
   breakdown.push({ criterio: 'valor_genetico', valor: valorGenetico, pesado: 0 });
 
   // 8. Penalización COI (inverted — high COI = low score)

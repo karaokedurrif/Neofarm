@@ -10,6 +10,8 @@ cd /workspace/packages/ui && pnpm build 2>/dev/null || true
 cd /workspace/packages/species-config && pnpm build 2>/dev/null || true
 # Build and start Next.js in production mode
 cd /workspace/apps/web
+# Ensure .env.local is available in the web app directory
+ln -sf /workspace/.env.local /workspace/apps/web/.env.local 2>/dev/null || true
 # Keep existing build if it exists, otherwise build
 if [ ! -f ".next/BUILD_ID" ]; then
   echo "Building Next.js for production..."

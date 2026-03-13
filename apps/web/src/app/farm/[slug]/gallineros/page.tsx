@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTenant } from '@/contexts/TenantContext';
 import EmptyState, { HoverGuide } from '@/components/tenant/EmptyState';
 import { Home, Plus, X, Edit2, Thermometer, Droplets, Users, Trash2 } from 'lucide-react';
@@ -9,7 +9,7 @@ import { Home, Plus, X, Edit2, Thermometer, Droplets, Users, Trash2 } from 'luci
 type ZonaTipo = 'Ponedoras' | 'Engorde' | 'Cría' | 'Exterior' | 'Mixto';
 
 interface Gallinero {
-  id: string;
+  id: number;
   name: string;
   zona: ZonaTipo;
   capacidad: number;
@@ -19,25 +19,36 @@ interface Gallinero {
   humedad: number;
   estado: 'ok' | 'warn' | 'alert';
   notas?: string;
-  isExample?: boolean;
+}
+
+interface GallineroAPI {
+  id: number;
+  name: string;
+  zona: string;
+  capacidad: number;
+  m2: number;
+  aves_count: number;
+  temp: number | null;
+  humedad: number | null;
+  estado: string;
+  notas: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 const ZONAS: ZonaTipo[] = ['Ponedoras', 'Engorde', 'Cría', 'Exterior', 'Mixto'];
 
-/* ── Example gallinero ───────────────────────────── */
-const EXAMPLE: Gallinero = {
-  id: 'ejemplo',
-  name: 'Gallinero Ejemplo',
-  zona: 'Ponedoras',
-  capacidad: 25,
-  m2: 30,
-  aves: 0,
-  temp: 18,
-  humedad: 60,
-  estado: 'ok',
-  notas: 'Este es un gallinero de ejemplo — edítalo o bórralo.',
-  isExample: true,
-};
+function apiToGallinero(g: GallineroAPI): Gallinero {
+  return {
+    id: g.id, name: g.name, zona: (g.zona || 'Mixto') as ZonaTipo,
+    capacidad: g.capacidad, m2: g.m2, aves: g.aves_count,
+    temp: g.temp ?? 18, humedad: g.humedad ?? 55,
+    estado: (g.estado || 'ok') as Gallinero['estado'],
+    notas: g.notas || undefined,
+  };
+}
+
+const API = (slug: string) => `/api/ovosfera/farms/${encodeURIComponent(slug)}`;
 
 function zonaEmoji(zona: ZonaTipo): string {
   switch (zona) {
@@ -54,45 +65,131 @@ function estadoLabel(e: string) {
 }
 
 export default function TenantGallinerosPage() {
-  const { farm } = useTenant();
-  const [gallineros, setGallineros] = useState<Gallinero[]>([EXAMPLE]);
+  const { farm, slug } = useTenant();
+  const [gallineros, setGallineros] = useState<Gallinero[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [selected, setSelected] = useState<Gallinero | null>(null);
-  const [form, setForm] = useState({
+  const [editId, setEditId] = useState<number | null>(null);
+  const emptyForm = () => ({
     name: '',
     zona: 'Ponedoras' as ZonaTipo,
     capacidad: '25',
     m2: '30',
     notas: '',
   });
+  const [form, setForm] = useState(emptyForm());
 
-  const realCount = gallineros.filter(g => !g.isExample).length;
+  /* ── Load from API ──────────────────────────────── */
+  const loadGallineros = useCallback(async () => {
+    if (!slug) return;
+    setFetchError(null);
+    try {
+      const res = await fetch(`${API(slug)}/gallineros`);
+      if (res.ok) {
+        const data: GallineroAPI[] = await res.json();
+        setGallineros(data.map(apiToGallinero));
+      } else {
+        setFetchError(`Error cargando gallineros: ${res.status}`);
+      }
+    } catch (err) { setFetchError('Error de red al cargar gallineros'); }
+    setLoaded(true);
+  }, [slug]);
 
-  const handleCreate = () => {
-    const id = `G${gallineros.length + 1}`;
-    setGallineros(prev => [...prev, {
-      id,
-      name: form.name || `Gallinero ${id}`,
-      zona: form.zona,
-      capacidad: parseInt(form.capacidad) || 20,
-      m2: parseInt(form.m2) || 25,
-      aves: 0,
-      temp: 18,
-      humedad: 55,
-      estado: 'ok',
-      notas: form.notas,
-    }]);
+  useEffect(() => { loadGallineros(); }, [loadGallineros]);
+
+  /* ── Create via API ─────────────────────────────── */
+  const handleCreate = async () => {
+    if (!slug || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API(slug)}/gallineros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name || 'Gallinero nuevo',
+          zona: form.zona,
+          capacidad: parseInt(form.capacidad) || 20,
+          m2: parseFloat(form.m2) || 25,
+          notas: form.notas || null,
+        }),
+      });
+      if (res.ok) {
+        const created: GallineroAPI = await res.json();
+        setGallineros(prev => [...prev, apiToGallinero(created)]);
+      }
+    } catch {}
+    setSaving(false);
     setShowCreate(false);
-    setForm({ name: '', zona: 'Ponedoras', capacidad: '25', m2: '30', notas: '' });
+    setForm(emptyForm());
+    setEditId(null);
   };
 
-  const handleDelete = (id: string) => {
-    setGallineros(prev => prev.filter(g => g.id !== id));
-    if (selected?.id === id) setSelected(null);
+  /* ── Update via API ─────────────────────────────── */
+  const handleUpdate = async () => {
+    if (!slug || !editId || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API(slug)}/gallineros/${editId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name || null,
+          zona: form.zona,
+          capacidad: parseInt(form.capacidad) || 20,
+          m2: parseFloat(form.m2) || 25,
+          notas: form.notas || null,
+        }),
+      });
+      if (res.ok) {
+        const updated: GallineroAPI = await res.json();
+        const mapped = apiToGallinero(updated);
+        setGallineros(prev => prev.map(g => g.id === editId ? mapped : g));
+        if (selected?.id === editId) setSelected(mapped);
+      }
+    } catch {}
+    setSaving(false);
+    setShowCreate(false);
+    setForm(emptyForm());
+    setEditId(null);
   };
+
+  /* ── Delete via API ─────────────────────────────── */
+  const handleDelete = async (id: number) => {
+    if (!slug) return;
+    try {
+      const res = await fetch(`${API(slug)}/gallineros/${id}`, { method: 'DELETE' });
+      if (res.ok || res.status === 204) {
+        setGallineros(prev => prev.filter(g => g.id !== id));
+        if (selected?.id === id) setSelected(null);
+      }
+    } catch {}
+  };
+
+  /* ── Open edit modal ────────────────────────────── */
+  const openEdit = (g: Gallinero) => {
+    setEditId(g.id);
+    setForm({
+      name: g.name,
+      zona: g.zona,
+      capacidad: String(g.capacidad),
+      m2: String(g.m2),
+      notas: g.notas || '',
+    });
+    setShowCreate(true);
+  };
+
+  if (!loaded) return <div className="nf-content"><p style={{ color: 'var(--neutral-500)' }}>Cargando gallineros…</p></div>;
 
   return (
     <div className="nf-content">
+      {fetchError && (
+        <div style={{ padding: '10px 16px', marginBottom: 16, borderRadius: 'var(--radius-md)', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626', fontSize: 13 }}>
+          ⚠️ {fetchError} — <button onClick={loadGallineros} style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', textDecoration: 'underline', fontSize: 13 }}>Reintentar</button>
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
@@ -100,9 +197,9 @@ export default function TenantGallinerosPage() {
             🏠 Gallineros
           </h1>
           <p style={{ fontSize: 13, color: 'var(--neutral-500)', marginTop: 4 }}>
-            {realCount === 0
+            {gallineros.length === 0
               ? 'Define tus gallineros: tipo de zona, capacidad y metros cuadrados'
-              : `${realCount} gallinero${realCount !== 1 ? 's' : ''} configurado${realCount !== 1 ? 's' : ''}`
+              : `${gallineros.length} gallinero${gallineros.length !== 1 ? 's' : ''} configurado${gallineros.length !== 1 ? 's' : ''}`
             }
           </p>
         </div>
@@ -116,7 +213,7 @@ export default function TenantGallinerosPage() {
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-        }} onClick={() => setShowCreate(false)}>
+        }} onClick={() => { setShowCreate(false); setEditId(null); }}>
           <div
             style={{
               width: '100%', maxWidth: 480, background: 'var(--neutral-0)',
@@ -126,8 +223,8 @@ export default function TenantGallinerosPage() {
             onClick={e => e.stopPropagation()}
           >
             <div style={{ padding: '20px 24px', background: 'var(--neutral-25)', borderBottom: 'var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700 }}>🏠 Nuevo Gallinero</h3>
-              <button onClick={() => setShowCreate(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700 }}>{editId ? '✏️ Editar Gallinero' : '🏠 Nuevo Gallinero'}</h3>
+              <button onClick={() => { setShowCreate(false); setEditId(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} style={{ color: 'var(--neutral-500)' }} />
               </button>
             </div>
@@ -168,10 +265,10 @@ export default function TenantGallinerosPage() {
                 background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)',
                 fontSize: 12, color: '#3B82F6',
               }}>
-                💡 Un gallinero puede ser interior (ponedoras, engorde, cría) o exterior (parque, patio). Después podrás asignar aves a cada gallinero.
+                💡 Los datos se guardan en base de datos.
               </div>
-              <button className="nf-btn primary" onClick={handleCreate} style={{ width: '100%' }}>
-                <Plus size={16} /> Crear gallinero
+              <button className="nf-btn primary" disabled={saving} onClick={editId ? handleUpdate : handleCreate} style={{ width: '100%' }}>
+                {saving ? '⏳ Guardando…' : editId ? '💾 Guardar cambios' : <><Plus size={16} /> Crear gallinero</>}
               </button>
             </div>
           </div>
@@ -238,30 +335,19 @@ export default function TenantGallinerosPage() {
               onClick={() => setSelected(g)}
               style={{
                 cursor: 'pointer',
-                opacity: g.isExample ? 0.6 : 1,
                 position: 'relative',
                 transition: 'all 160ms ease',
               }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
             >
-              {g.isExample && (
-                <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  padding: '2px 8px', borderRadius: 4,
-                  background: 'rgba(59,130,246,0.1)', color: '#3B82F6',
-                  fontSize: 10, fontWeight: 600,
-                }}>
-                  ejemplo
-                </div>
-              )}
               <div style={{ padding: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <span style={{ fontSize: 24 }}>{zonaEmoji(g.zona)}</span>
                   <div>
                     <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--neutral-800)' }}>{g.name}</h3>
                     <span style={{ fontSize: 12, color: 'var(--neutral-500)' }}>
-                      {g.zona} · {g.id}
+                      {g.zona} · #{g.id}
                     </span>
                   </div>
                 </div>
@@ -291,16 +377,28 @@ export default function TenantGallinerosPage() {
                   <span style={{ fontSize: 12, color: 'var(--neutral-400)' }}>
                     {estadoLabel(g.estado)}
                   </span>
-                  <button
-                    onClick={e => { e.stopPropagation(); handleDelete(g.id); }}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      padding: 4, borderRadius: 4, color: 'var(--neutral-400)',
-                    }}
-                    title="Eliminar"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); openEdit(g); }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        padding: 4, borderRadius: 4, color: 'var(--neutral-400)',
+                      }}
+                      title="Editar"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); handleDelete(g.id); }}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        padding: 4, borderRadius: 4, color: 'var(--neutral-400)',
+                      }}
+                      title="Eliminar"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

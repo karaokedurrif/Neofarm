@@ -6,7 +6,7 @@ import {
   Layers, Bird, TrendingUp, Shield, Heart, Target,
   ChevronRight, BarChart2, Users
 } from 'lucide-react';
-import { loadProgram, getBirdsByGeneration, programStats } from '@/lib/genetics/store';
+import { loadProgram, getBirdsByGeneration, programStats, getActiveFarm } from '@/lib/genetics/store';
 import type { SelectionProgram, Bird as BirdType } from '@/lib/genetics/types';
 import { calculateSelectionScore, rankBirds, calculateUniformity, scoreColor } from '@/lib/genetics/services/scoring.service';
 
@@ -130,6 +130,8 @@ export default function GenerationsDashboardPage() {
 
   useEffect(() => { setProg(loadProgram()); }, []);
 
+  const geneticsBase = getActiveFarm() ? `/farm/${getActiveFarm()}/genetics` : '/genetics';
+
   const generations = useMemo(() => {
     if (!prog) return [];
     const gens = ['F0', 'F1', 'F2', 'F3', 'F4', 'F5+'];
@@ -154,7 +156,7 @@ export default function GenerationsDashboardPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
+        <Link href={geneticsBase} style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
         <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Layers size={20} style={{ color: 'var(--primary)' }} /> Generaciones
         </h1>

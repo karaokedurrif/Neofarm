@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { ClipboardList, Weight, Bird, Calendar, Check, Plus, Search } from 'lucide-react';
-import { loadProgram, addMeasurement, addEvent, updateBird } from '@/lib/genetics/store';
+import { loadProgram, addMeasurement, addEvent, updateBird, getActiveFarm } from '@/lib/genetics/store';
 import type { SelectionProgram, BirdMeasurement, BirdEvent, Bird as BirdType } from '@/lib/genetics/types';
 
 type Mode = 'pesaje' | 'evento' | 'evaluacion';
@@ -30,6 +30,8 @@ export default function QuickEntryPage() {
   const [docilidad, setDocilidad] = useState(3);
 
   useEffect(() => { setProg(loadProgram()); }, []);
+
+  const geneticsBase = getActiveFarm() ? `/farm/${getActiveFarm()}/genetics` : '/genetics';
 
   const filteredBirds = useMemo(() => {
     if (!prog) return [];
@@ -83,7 +85,7 @@ export default function QuickEntryPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4, maxWidth: 600 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
+        <Link href={geneticsBase} style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
         <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ClipboardList size={20} style={{ color: 'var(--primary)' }} /> Entrada Rápida
         </h1>

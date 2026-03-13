@@ -6,7 +6,7 @@ import {
   Heart, Bird, Shield, ChevronRight, Plus, X, AlertTriangle,
   Check, Trash2, Dna, Layers, ArrowRight
 } from 'lucide-react';
-import { loadProgram, saveProgram, addBreedingPair, updateBreedingPair } from '@/lib/genetics/store';
+import { loadProgram, saveProgram, addBreedingPair, updateBreedingPair, getActiveFarm } from '@/lib/genetics/store';
 import type { SelectionProgram, Bird as BirdType, BreedingPair } from '@/lib/genetics/types';
 import { calculateCOI, classifyInbreedingRisk, coiColor, coiLabel, estimateOffspringCOI } from '@/lib/genetics/services/inbreeding.service';
 import { calculateSelectionScore, scoreColor } from '@/lib/genetics/services/scoring.service';
@@ -90,6 +90,8 @@ export default function MateCanvasPage() {
 
   useEffect(() => { setProg(loadProgram()); }, []);
 
+  const geneticsBase = getActiveFarm() ? `/farm/${getActiveFarm()}/genetics` : '/genetics';
+
   /* Available males & females */
   const males = useMemo(() => {
     if (!prog) return [];
@@ -142,7 +144,7 @@ export default function MateCanvasPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
+        <Link href={geneticsBase} style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
         <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Heart size={20} style={{ color: '#EC4899' }} /> Mate Canvas
         </h1>

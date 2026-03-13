@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTenant } from '@/contexts/TenantContext';
@@ -60,6 +60,33 @@ export default function TenantDashboardPage() {
   const { farm } = useTenant();
   const params = useParams();
   const slug = params?.slug as string;
+  const [counts, setCounts] = useState({ aves: 0, gallineros: 0 });
+
+  const loadCounts = useCallback(async () => {
+    if (!slug) return;
+    const api = `/api/ovosfera/farms/${encodeURIComponent(slug)}`;
+    try {
+      const [avesRes, gallRes] = await Promise.all([
+        fetch(`${api}/aves`),
+        fetch(`${api}/gallineros`),
+      ]);
+      const avesData = avesRes.ok ? await avesRes.json() : [];
+      const gallData = gallRes.ok ? await gallRes.json() : [];
+      setCounts({ aves: avesData.length, gallineros: gallData.length });
+    } catch { /* network error — show 0 */ }
+  }, [slug]);
+
+  useEffect(() => { loadCounts(); }, [loadCounts]);
+
+  const stepsCompleted = (counts.gallineros > 0 ? 1 : 0) + (counts.aves > 0 ? 1 : 0);
+
+  const STEPS_LIVE = [
+    { step: 1, label: 'Crear gallineros', done: counts.gallineros > 0, page: 'gallineros' },
+    { step: 2, label: 'Registrar aves', done: counts.aves > 0, page: 'aves' },
+    { step: 3, label: 'Apuntar producción', done: false, page: 'production' },
+    { step: 4, label: 'Plan sanitario', done: false, page: 'health' },
+    { step: 5, label: 'Configurar sensores', done: false, page: 'devices' },
+  ];
 
   return (
     <div className="nf-content" style={{ paddingTop: 24, paddingBottom: 48 }}>
@@ -84,11 +111,11 @@ export default function TenantDashboardPage() {
             padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700,
             background: 'rgba(59,130,246,0.1)', color: '#3B82F6',
           }}>
-            0 / {STEPS.length}
+            {stepsCompleted} / {STEPS_LIVE.length}
           </span>
         </div>
         <div className="nf-card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {STEPS.map(s => (
+          {STEPS_LIVE.map(s => (
             <Link
               key={s.step}
               href={`/farm/${slug}/${s.page}`}
@@ -133,14 +160,14 @@ export default function TenantDashboardPage() {
         marginBottom: 24,
       }}>
         {[
-          { label: 'Total Aves', icon: Activity, value: '0' },
-          { label: 'Gallineros', icon: Home, value: '0' },
+          { label: 'Total Aves', icon: Activity, value: String(counts.aves) },
+          { label: 'Gallineros', icon: Home, value: String(counts.gallineros) },
           { label: 'Huevos/día', icon: Egg, value: '0' },
           { label: 'Tasa Postura', icon: TrendingUp, value: '—' },
           { label: 'Score Granja', icon: Zap, value: '—' },
         ].map(kpi => (
           <HoverGuide key={kpi.label} tip={`Registra datos para ver "${kpi.label}" actualizado`}>
-            <div className="nf-kbox" style={{ opacity: 0.6 }}>
+            <div className="nf-kbox" style={{ opacity: kpi.value === '0' || kpi.value === '—' ? 0.6 : 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <kpi.icon size={16} style={{ color: 'var(--neutral-400)' }} />
                 <span className="nf-kbox-v" style={{ fontSize: 22 }}>{kpi.value}</span>

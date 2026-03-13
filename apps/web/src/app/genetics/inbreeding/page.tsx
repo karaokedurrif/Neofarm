@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Shield, AlertTriangle, Bird, ChevronRight, Dna, Heart } from 'lucide-react';
-import { loadProgram } from '@/lib/genetics/store';
+import { loadProgram, getActiveFarm } from '@/lib/genetics/store';
 import type { SelectionProgram, Bird as BirdType } from '@/lib/genetics/types';
 import { calculateCOI, estimateOffspringCOI, classifyInbreedingRisk, coiColor, coiLabel, explainRisk } from '@/lib/genetics/services/inbreeding.service';
 import { calculateBreedContribution, findCommonAncestors } from '@/lib/genetics/services/pedigree.service';
@@ -36,7 +36,7 @@ export default function InbreedingPage() {
 
   useEffect(() => { setProg(loadProgram()); }, []);
 
-  /* Active reproductors */
+  const geneticsBase = getActiveFarm() ? `/farm/${getActiveFarm()}/genetics` : '/genetics';
   const males = useMemo(() =>
     prog?.birds.filter(b => b.sexo === 'M' && b.estadoProductivo === 'activo').sort((a, b) => a.anilla.localeCompare(b.anilla)) || [],
     [prog]
@@ -64,11 +64,11 @@ export default function InbreedingPage() {
     return { coi, risk, explain, commonAnc, macho, hembra };
   }, [selectedPair, prog]);
 
-  /* Per-bird COI summary */
+  /* Per-bird COI summary — include all active birds (F0 founders show 0% = clean genetics) */
   const birdCOIs = useMemo(() => {
     if (!prog) return [];
     return prog.birds
-      .filter(b => b.padreId && b.madreId)
+      .filter(b => b.estadoProductivo === 'activo')
       .map(b => ({
         bird: b,
         coi: calculateCOI(b.id, prog.birds),
@@ -82,7 +82,7 @@ export default function InbreedingPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
+        <Link href={geneticsBase} style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
         <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Shield size={20} style={{ color: '#F59E0B' }} /> Observatorio de Consanguinidad
         </h1>

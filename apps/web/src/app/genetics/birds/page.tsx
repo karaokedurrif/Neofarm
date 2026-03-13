@@ -6,7 +6,7 @@ import {
   Bird, Search, Filter, ChevronRight, Plus, ArrowUpDown,
   Eye, Dna, X, ChevronDown
 } from 'lucide-react';
-import { loadProgram, programStats } from '@/lib/genetics/store';
+import { loadProgram, programStats, getActiveFarm } from '@/lib/genetics/store';
 import type { SelectionProgram, Bird as BirdType } from '@/lib/genetics/types';
 import { calculateSelectionScore, scoreColor } from '@/lib/genetics/services/scoring.service';
 
@@ -52,7 +52,7 @@ export default function BirdRegistryPage() {
 
   useEffect(() => { setProg(loadProgram()); }, []);
 
-  /* Compute scores for all birds */
+  const geneticsBase = getActiveFarm() ? `/farm/${getActiveFarm()}/genetics` : '/genetics';
   const scoredBirds = useMemo(() => {
     if (!prog) return [];
     return prog.birds.map(b => ({
@@ -104,7 +104,7 @@ export default function BirdRegistryPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>
+        <Link href={geneticsBase} style={{ color: 'var(--neutral-600)', textDecoration: 'none', fontSize: 12 }}>
           ← Programa
         </Link>
         <div style={{ flex: 1 }}>
@@ -112,7 +112,7 @@ export default function BirdRegistryPage() {
             <Bird size={20} style={{ color: 'var(--primary)' }} />
             Registro de Aves
           </h1>
-          <div style={{ fontSize: 12, color: 'var(--neutral-400)' }}>
+          <div style={{ fontSize: 12, color: 'var(--neutral-700)', fontWeight: 500 }}>
             {stats.totalBirds} aves · {stats.activeBirds} activas · {stats.males} ♂ · {stats.females} ♀
           </div>
         </div>
@@ -127,23 +127,23 @@ export default function BirdRegistryPage() {
           {search && <X size={12} onClick={() => setSearch('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: 'var(--neutral-400)' }} />}
         </div>
 
-        <select className="nf-input" value={filterGen} onChange={e => setFilterGen(e.target.value)} style={{ height: 34, width: 90 }}>
+        <select className="nf-input" value={filterGen} onChange={e => setFilterGen(e.target.value)} style={{ height: 34, width: 90, fontSize: 12, fontWeight: 500, color: 'var(--neutral-700)' }}>
           <option value="all">Gen: All</option>
           {generations.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
 
-        <select className="nf-input" value={filterSex} onChange={e => setFilterSex(e.target.value)} style={{ height: 34, width: 90 }}>
+        <select className="nf-input" value={filterSex} onChange={e => setFilterSex(e.target.value)} style={{ height: 34, width: 90, fontSize: 12, fontWeight: 500, color: 'var(--neutral-700)' }}>
           <option value="all">Sexo: All</option>
           <option value="M">♂ Macho</option>
           <option value="F">♀ Hembra</option>
         </select>
 
-        <select className="nf-input" value={filterLine} onChange={e => setFilterLine(e.target.value)} style={{ height: 34, width: 120 }}>
+        <select className="nf-input" value={filterLine} onChange={e => setFilterLine(e.target.value)} style={{ height: 34, width: 120, fontSize: 12, fontWeight: 500, color: 'var(--neutral-700)' }}>
           <option value="all">Línea: All</option>
           {lines.map(l => <option key={l} value={l}>{l}</option>)}
         </select>
 
-        <select className="nf-input" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ height: 34, width: 110 }}>
+        <select className="nf-input" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ height: 34, width: 110, fontSize: 12, fontWeight: 500, color: 'var(--neutral-700)' }}>
           <option value="all">Estado: All</option>
           <option value="activo">Activo</option>
           <option value="sacrificado">Sacrificado</option>
@@ -158,7 +158,7 @@ export default function BirdRegistryPage() {
           </button>
         )}
 
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--neutral-400)' }}>
+        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--neutral-600)', fontWeight: 500 }}>
           {filtered.length} resultados
         </div>
       </div>
@@ -198,7 +198,7 @@ export default function BirdRegistryPage() {
                 <td style={{ color: 'var(--neutral-700)' }}>{b.nombre || '—'}</td>
                 <td><SexIcon sex={b.sexo} /></td>
                 <td><GenBadge gen={b.generacion} /></td>
-                <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--neutral-400)' }}>{b.raza}</td>
+                <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--neutral-700)' }}>{b.raza}</td>
                 <td>
                   {b.linea && (
                     <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 3,

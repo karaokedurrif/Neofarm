@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { BookOpen, Search, Bird, TrendingUp, Egg, Target, Shield, Dna } from 'lucide-react';
 import { BREED_CATALOG } from '@/lib/genetics/breeds';
+import { getActiveFarm } from '@/lib/genetics/store';
 import type { GompertzParams, BreedCatalogEntry } from '@/lib/genetics/types';
 import { gompertzWeight, gompertzCurve } from '@/lib/genetics/services/gompertz.service';
 
@@ -129,10 +130,12 @@ export default function CatalogPage() {
     return list;
   }, [search, profile]);
 
+  const geneticsBase = getActiveFarm() ? `/farm/${getActiveFarm()}/genetics` : '/genetics';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Link href="/genetics" style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
+        <Link href={geneticsBase} style={{ color: 'var(--neutral-400)', textDecoration: 'none', fontSize: 12 }}>← Programa</Link>
         <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--neutral-900)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <BookOpen size={20} style={{ color: 'var(--primary)' }} /> Catálogo de Razas Heritage
         </h1>
