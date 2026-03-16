@@ -10,45 +10,90 @@ import {
 import { useTenant } from '@/contexts/TenantContext';
 import { loadProgram, setActiveFarm } from '@/lib/genetics/store';
 import { calculateSelectionScore } from '@/lib/genetics/services/scoring.service';
-import { calculateCOI, estimateOffspringCOI } from '@/lib/genetics/services/inbreeding.service';
+import { calculateCOI } from '@/lib/genetics/services/inbreeding.service';
 import { BREED_CATALOG } from '@/lib/genetics/breeds';
 import type { SelectionProgram, Bird as BirdType } from '@/lib/genetics/types';
 
-/* ── Types ── */
-interface GallineroRecomendado {
-  id: string;
-  nombre: string;
-  objetivo: string;
-  gallo: { anilla: string; raza: string; justificacion: string };
-  gallinas: { anilla: string; raza: string; justificacion: string }[];
-  ratio: string;
-  rasgos_prioritarios: string[];
-  f1_esperado: string;
-  riesgos: string[];
-}
+/* ── Simple Markdown → JSX renderer ── */
+function MarkdownRenderer({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let paraLines: string[] = [];
 
-interface GalloSinAsignar {
-  anilla: string;
-  rol: string;
-  motivo: string;
-}
-
-interface PlanCria {
-  resumen_ejecutivo: string;
-  num_gallineros_cria: number;
-  gallineros: GallineroRecomendado[];
-  gallos_sin_asignar: GalloSinAsignar[];
-  plan_consanguinidad: {
-    coi_medio_actual: number;
-    estrategia: string;
-    rotaciones_previstas: string;
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={`ul-${elements.length}`} style={{ margin: '6px 0 10px 16px', padding: 0, listStyleType: 'disc' }}>
+          {listItems.map((li, i) => <li key={i} style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--neutral-700)', marginBottom: 2 }} dangerouslySetInnerHTML={{ __html: inlineMd(li) }} />)}
+        </ul>
+      );
+      listItems = [];
+    }
   };
-  roadmap: { generacion: string; cruces: string; seleccion: string; objetivo: string }[];
-  nutricion_reproductores: string;
-  calendario: { mejor_epoca_incubacion: string; duracion_ciclo: string; notas: string };
-  raw_response?: string;
-  parse_error?: boolean;
-  error?: string;
+
+  const flushPara = () => {
+    if (paraLines.length > 0) {
+      const joined = paraLines.join(' ').trim();
+      if (joined) {
+        elements.push(
+          <p key={`p-${elements.length}`} style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--neutral-700)', margin: '0 0 10px' }} dangerouslySetInnerHTML={{ __html: inlineMd(joined) }} />
+        );
+      }
+      paraLines = [];
+    }
+  };
+
+  function inlineMd(s: string): string {
+    return s
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code style="background:rgba(139,92,246,0.08);padding:1px 5px;border-radius:4px;font-size:12px">$1</code>');
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith('## ')) {
+      flushList();
+      flushPara();
+      elements.push(
+        <h2 key={`h2-${i}`} style={{
+          fontSize: 16, fontWeight: 700, color: '#8B5CF6', margin: '20px 0 8px',
+          paddingBottom: 6, borderBottom: '2px solid rgba(139,92,246,0.15)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <Sparkles size={15} style={{ color: '#8B5CF6', flexShrink: 0 }} />
+          <span dangerouslySetInnerHTML={{ __html: inlineMd(line.slice(3)) }} />
+        </h2>
+      );
+    } else if (line.startsWith('### ')) {
+      flushList();
+      flushPara();
+      elements.push(
+        <h3 key={`h3-${i}`} style={{
+          fontSize: 14, fontWeight: 700, color: '#3B82F6', margin: '16px 0 6px',
+          paddingLeft: 10, borderLeft: '3px solid #3B82F6',
+        }}>
+          <span dangerouslySetInnerHTML={{ __html: inlineMd(line.slice(4)) }} />
+        </h3>
+      );
+    } else if (/^[-*] /.test(line)) {
+      flushPara();
+      listItems.push(line.replace(/^[-*] /, ''));
+    } else if (line.trim() === '') {
+      flushList();
+      flushPara();
+    } else {
+      flushList();
+      paraLines.push(line);
+    }
+  }
+  flushList();
+  flushPara();
+
+  return <>{elements}</>;
 }
 
 /* ── Color helpers ── */
@@ -63,7 +108,7 @@ export default function RecommenderPage() {
   const base = `/farm/${slug}/genetics`;
 
   const [prog, setProg] = useState<SelectionProgram | null>(null);
-  const [plan, setPlan] = useState<PlanCria | null>(null);
+  const [recommendation, setRecommendation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -95,7 +140,7 @@ export default function RecommenderPage() {
     if (!prog) return;
     setLoading(true);
     setError(null);
-    setPlan(null);
+    setRecommendation(null);
 
     try {
       const catalogSummary = BREED_CATALOG.map(b => ({
@@ -135,7 +180,7 @@ export default function RecommenderPage() {
       }
 
       const data = await res.json();
-      setPlan(data);
+      setRecommendation(data.recommendation || data.error || 'Sin respuesta');
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -161,9 +206,6 @@ export default function RecommenderPage() {
       </div>
     );
   }
-
-  // Find a bird by anilla across our enriched birds
-  const findBird = (anilla: string) => enrichedBirds.find(b => b.anilla === anilla);
 
   return (
     <div className="nf-content" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -195,7 +237,7 @@ export default function RecommenderPage() {
             }}
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {loading ? 'Claude analizando...' : plan ? 'Regenerar Plan' : 'Generar Plan de Cría'}
+            {loading ? 'Claude analizando...' : recommendation ? 'Regenerar Plan' : 'Generar Plan de Cría'}
           </button>
         </div>
       </div>
@@ -283,234 +325,30 @@ export default function RecommenderPage() {
         </div>
       )}
 
-      {/* ═══════ RESULTS ═══════ */}
-      {plan && !plan.parse_error && !plan.error && (
-        <>
-          {/* Executive summary */}
-          <div className="nf-card" style={{ background: 'linear-gradient(135deg, rgba(139,92,246,0.05), rgba(236,72,153,0.05))', border: '1px solid rgba(139,92,246,0.15)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <Sparkles size={16} style={{ color: '#8B5CF6' }} />
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#8B5CF6' }}>Plan de Cría IA</span>
-              <span className="nf-tag" style={{ background: '#8B5CF6', color: '#fff', fontSize: 10 }}>
-                {plan.num_gallineros_cria} gallineros
-              </span>
+      {/* ═══════ RESULTS (Markdown) ═══════ */}
+      {recommendation && !loading && (
+        <div className="nf-card" style={{
+          background: 'linear-gradient(135deg, rgba(139,92,246,0.03), rgba(236,72,153,0.03))',
+          border: '1px solid rgba(139,92,246,0.12)',
+          padding: '20px 24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={14} color="#fff" />
             </div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--neutral-700)', margin: 0 }}>
-              {plan.resumen_ejecutivo}
-            </p>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#8B5CF6' }}>Plan de Cría IA</span>
+            <span style={{ fontSize: 11, color: 'var(--neutral-400)', marginLeft: 'auto' }}>
+              Generado por Claude · {enrichedBirds.length} aves analizadas
+            </span>
           </div>
-
-          {/* Breeding pens */}
-          {plan.gallineros?.map((g, i) => {
-            const galloData = findBird(g.gallo?.anilla);
-            return (
-              <div key={g.id || i} className="nf-card" style={{ border: '1px solid var(--neutral-100)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 8,
-                    background: ['#3B82F6', '#EC4899', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444'][i % 6],
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 14, fontWeight: 800,
-                  }}>
-                    {g.id || `L${i + 1}`}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--neutral-900)' }}>{g.nombre}</div>
-                    <div style={{ fontSize: 11, color: 'var(--neutral-400)' }}>{g.objetivo}</div>
-                  </div>
-                  <span className="nf-tag" style={{ fontSize: 11, fontWeight: 700 }}>Ratio {g.ratio}</span>
-                </div>
-
-                {/* Rooster */}
-                <div style={{ background: 'rgba(59,130,246,0.04)', borderRadius: 10, padding: 12, marginBottom: 10, border: '1px solid rgba(59,130,246,0.1)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 18 }}>🐓</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#2563EB' }}>GALLO: {g.gallo?.anilla}</span>
-                    <span style={{ fontSize: 11, color: 'var(--neutral-500)' }}>— {g.gallo?.raza}</span>
-                    {galloData && (
-                      <span style={{ fontWeight: 700, fontSize: 12, color: scoreColor(galloData.selectionScore || 0), marginLeft: 'auto' }}>
-                        Score {(galloData.selectionScore || 0).toFixed(0)} · {galloData.pesoActual}kg
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--neutral-600)', lineHeight: 1.5 }}>{g.gallo?.justificacion}</div>
-                </div>
-
-                {/* Hens */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {g.gallinas?.map((h, j) => {
-                    const henData = findBird(h.anilla);
-                    const coiWithRooster = galloData && henData
-                      ? estimateOffspringCOI(galloData.id, henData.id, prog?.birds || [])
-                      : 0;
-                    return (
-                      <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(236,72,153,0.03)', border: '1px solid rgba(236,72,153,0.08)' }}>
-                        <span style={{ fontSize: 14 }}>🐔</span>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#DB2777', minWidth: 90 }}>{h.anilla}</span>
-                        <span style={{ fontSize: 11, color: 'var(--neutral-500)', flex: 1 }}>{h.raza}</span>
-                        {henData && (
-                          <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--neutral-500)' }}>
-                            {henData.pesoActual}kg
-                          </span>
-                        )}
-                        {henData && (
-                          <span style={{ fontWeight: 700, fontSize: 11, color: scoreColor(henData.selectionScore || 0) }}>
-                            {(henData.selectionScore || 0).toFixed(0)}
-                          </span>
-                        )}
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                          background: coiWithRooster < 0.03 ? '#DCFCE7' : coiWithRooster < 0.06 ? '#FEF3C7' : '#FEE2E2',
-                          color: coiWithRooster < 0.03 ? '#16A34A' : coiWithRooster < 0.06 ? '#D97706' : '#DC2626',
-                        }}>
-                          COI {(coiWithRooster * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Priority traits */}
-                {g.rasgos_prioritarios?.length > 0 && (
-                  <div style={{ marginTop: 10, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {g.rasgos_prioritarios.map(r => (
-                      <span key={r} className="nf-tag" style={{ fontSize: 10, background: 'rgba(139,92,246,0.1)', color: '#7C3AED' }}>{r}</span>
-                    ))}
-                  </div>
-                )}
-
-                {/* F1 expected + risks */}
-                {g.f1_esperado && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--neutral-600)', lineHeight: 1.5 }}>
-                    <strong style={{ color: '#16A34A' }}>F1 esperada:</strong> {g.f1_esperado}
-                  </div>
-                )}
-                {g.riesgos?.length > 0 && (
-                  <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {g.riesgos.map((r, k) => (
-                      <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#D97706' }}>
-                        <AlertTriangle size={11} /> {r}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Unassigned roosters */}
-          {plan.gallos_sin_asignar?.length > 0 && (
-            <div className="nf-card">
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--neutral-800)' }}>
-                🐓 Gallos sin asignar
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {plan.gallos_sin_asignar.map((g, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--neutral-25)', fontSize: 12 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--neutral-800)', minWidth: 100 }}>{g.anilla}</span>
-                    <span className="nf-tag" style={{ fontSize: 10 }}>{g.rol}</span>
-                    <span style={{ flex: 1, color: 'var(--neutral-500)', fontSize: 11 }}>{g.motivo}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Consanguinity plan */}
-          {plan.plan_consanguinidad && (
-            <div className="nf-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <Shield size={16} style={{ color: '#6366F1' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#6366F1' }}>Plan de Consanguinidad</span>
-                {plan.plan_consanguinidad.coi_medio_actual !== undefined && (
-                  <span className="nf-tag" style={{ fontSize: 10 }}>COI medio: {(plan.plan_consanguinidad.coi_medio_actual * 100).toFixed(1)}%</span>
-                )}
-              </div>
-              <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--neutral-600)', margin: '0 0 8px' }}>
-                <strong>Estrategia:</strong> {plan.plan_consanguinidad.estrategia}
-              </p>
-              <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--neutral-600)', margin: 0 }}>
-                <strong>Rotaciones:</strong> {plan.plan_consanguinidad.rotaciones_previstas}
-              </p>
-            </div>
-          )}
-
-          {/* Roadmap */}
-          {plan.roadmap?.length > 0 && (
-            <div className="nf-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <Dna size={16} style={{ color: '#8B5CF6' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#8B5CF6' }}>Roadmap Generacional</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {plan.roadmap.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--neutral-25)', border: '1px solid var(--neutral-100)' }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 10,
-                      background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: 12, fontWeight: 800, flexShrink: 0,
-                    }}>
-                      {r.generacion}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--neutral-900)', marginBottom: 2 }}>{r.objetivo}</div>
-                      <div style={{ fontSize: 11, color: 'var(--neutral-500)', lineHeight: 1.5 }}>
-                        <strong>Cruces:</strong> {r.cruces}<br />
-                        <strong>Selección:</strong> {r.seleccion}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Calendar + Nutrition */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {plan.calendario && (
-              <div className="nf-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <Calendar size={16} style={{ color: '#F59E0B' }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#F59E0B' }}>Calendario</span>
-                </div>
-                <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--neutral-600)' }}>
-                  <div><strong>Mejor época:</strong> {plan.calendario.mejor_epoca_incubacion}</div>
-                  <div><strong>Ciclo:</strong> {plan.calendario.duracion_ciclo}</div>
-                  {plan.calendario.notas && <div style={{ marginTop: 6 }}>{plan.calendario.notas}</div>}
-                </div>
-              </div>
-            )}
-            {plan.nutricion_reproductores && (
-              <div className="nf-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <Utensils size={16} style={{ color: '#10B981' }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#10B981' }}>Nutrición Reproductores</span>
-                </div>
-                <div style={{ fontSize: 12, lineHeight: 1.7, color: 'var(--neutral-600)' }}>
-                  {plan.nutricion_reproductores}
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Raw response fallback */}
-      {plan?.parse_error && plan?.raw_response && (
-        <div className="nf-card">
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: '#D97706' }}>
-            <AlertTriangle size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
-            Respuesta de Claude (formato libre)
-          </div>
-          <div style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--neutral-600)', whiteSpace: 'pre-wrap' }}>
-            {plan.raw_response}
+          <div style={{ borderTop: '1px solid rgba(139,92,246,0.1)', paddingTop: 12 }}>
+            <MarkdownRenderer text={recommendation} />
           </div>
         </div>
       )}
 
       {/* Initial state — prompt to generate */}
-      {!plan && !loading && !error && (
+      {!recommendation && !loading && !error && (
         <div className="nf-card" style={{ textAlign: 'center', padding: 48, background: 'linear-gradient(135deg, rgba(139,92,246,0.02), rgba(236,72,153,0.02))' }}>
           <Sparkles size={40} style={{ color: '#8B5CF6', marginBottom: 12 }} />
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--neutral-800)', margin: '0 0 8px' }}>
