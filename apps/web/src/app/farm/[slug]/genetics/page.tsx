@@ -295,7 +295,7 @@ export default function TenantGeneticsPage() {
           <QuickNav href={`${base}/inbreeding`} Icon={Shield} label="Observatorio COI" desc="Consanguinidad, mapa de calor" />
           <QuickNav href={`${base}/quick-entry`} Icon={ClipboardList} label="Entrada Rápida" desc="Pesajes, evaluaciones, eventos" />
           <QuickNav href={`${base}/catalog`} Icon={BookOpen} label="Catálogo" desc="Razas heritage, parámetros zootécnicos" />
-          <QuickNav href={`${base}/catalog`} Icon={Sparkles} label="Cruces IA" desc="Recomendador inteligente de cruces" />
+          <QuickNav href={`${base}/recommender`} Icon={Sparkles} label="Cruces IA" desc="Recomendador inteligente con Claude" />
         </div>
       </div>
     </div>
