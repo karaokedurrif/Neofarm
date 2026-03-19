@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import AppShell from '@/components/AppShell';
 import { AuthProvider } from '@/contexts/AuthContext';
 
@@ -22,6 +23,10 @@ export default function RootLayout({
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
+        <Script
+          src="https://seedy-api.neofarm.io/dashboard/ovosfera-inject.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
