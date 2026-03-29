@@ -9,19 +9,48 @@
   --border: #333333;
   --text: #E5E5E5;
   --text-muted: #9CA3AF;
-  --primary: #7F1D1D;
-  --primary-light: #991B1B;
+  --primary: #991B1B;
+  --primary-light: #B91C1C;
   --accent: #D4A843;
   --accent-light: #F5DEB3;
+  --sidebar-active: #7F1D1D;
   --success: #4ADE80;
   --warning: #FBBF24;
   --danger: #EF4444;
   --info: #60A5FA;
 }
 
+/* Theme overrides */
+html[data-theme="joven"] {
+  --primary: #7C3AED;
+  --primary-light: #A78BFA;
+  --accent: #C084FC;
+  --accent-light: #E9D5FF;
+  --sidebar-active: #6D28D9;
+}
+html[data-theme="crianza"] {
+  --primary: #991B1B;
+  --primary-light: #B91C1C;
+  --accent: #D4A843;
+  --accent-light: #F5DEB3;
+  --sidebar-active: #7F1D1D;
+}
+html[data-theme="reserva"] {
+  --primary: #92400E;
+  --primary-light: #B45309;
+  --accent: #D97706;
+  --accent-light: #FCD34D;
+  --sidebar-active: #78350F;
+}
+
+html {
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
+  font-family: var(--font-ui), 'Inter', system-ui, sans-serif;
 }
 
 /* Scrollbar */

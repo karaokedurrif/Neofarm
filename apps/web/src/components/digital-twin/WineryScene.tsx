@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { EffectComposer, Bloom, SSAO, Vignette } from '@react-three/postprocessing'
 import { Suspense } from 'react'
+import * as THREE from 'three'
 
 interface WinerySceneProps {
   children: React.ReactNode
@@ -13,12 +14,10 @@ interface WinerySceneProps {
 function SceneLighting() {
   return (
     <>
-      {/* Warm sunset ambient */}
-      <ambientLight intensity={0.3} color="#FFD4A0" />
-      {/* Sun (low angle, warm) */}
+      {/* Primary sun — warm golden-hour directional */}
       <directionalLight
         position={[-20, 15, -10]}
-        intensity={1.8}
+        intensity={2}
         color="#FF9944"
         castShadow
         shadow-mapSize-width={2048}
@@ -28,11 +27,14 @@ function SceneLighting() {
         shadow-camera-right={30}
         shadow-camera-top={30}
         shadow-camera-bottom={-30}
+        shadow-bias={-0.0005}
       />
-      {/* Fill light from cellar side */}
-      <directionalLight position={[10, 8, 15]} intensity={0.4} color="#B08050" />
-      {/* Rim light for depth */}
+      {/* Fill light — low-intensity warm from opposite side */}
+      <directionalLight position={[10, 8, 15]} intensity={0.6} color="#B08050" />
+      {/* Rim light for depth separation */}
       <pointLight position={[0, 12, -20]} intensity={0.5} color="#FF6633" />
+      {/* Subtle hemisphere for ambient bounce */}
+      <hemisphereLight args={['#FFD4A0', '#3D2B1F', 0.15]} />
     </>
   )
 }
@@ -41,13 +43,13 @@ function PostProcessing() {
   return (
     <EffectComposer>
       <Bloom
-        luminanceThreshold={0.6}
+        luminanceThreshold={1}
         luminanceSmoothing={0.9}
-        intensity={0.5}
+        intensity={0.6}
       />
       <SSAO
-        radius={0.12}
-        intensity={18}
+        radius={0.15}
+        intensity={20}
         luminanceInfluence={0.5}
       />
       <Vignette eskil={false} offset={0.3} darkness={0.55} />
@@ -73,10 +75,16 @@ export default function WineryScene({
     <Canvas
       shadows
       dpr={[1, 1.5]}
-      gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+      gl={{
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance',
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 1.2,
+      }}
       style={{ background: '#0F0F0F' }}
     >
-      <fog attach="fog" args={['#1A0F05', 40, 100]} />
+      <fog attach="fog" args={['#1A0F05', 50, 120]} />
       <color attach="background" args={['#0F0F0F']} />
 
       <PerspectiveCamera makeDefault position={cameraPosition} fov={45} near={0.1} far={200} />
@@ -85,7 +93,8 @@ export default function WineryScene({
         enablePan
         enableZoom
         enableRotate
-        maxPolarAngle={Math.PI / 2.2}
+        minPolarAngle={Math.PI / 8}
+        maxPolarAngle={Math.PI / 2.4}
         minDistance={5}
         maxDistance={60}
         dampingFactor={0.05}
@@ -94,7 +103,8 @@ export default function WineryScene({
 
       <SceneLighting />
 
-      <Environment preset="sunset" environmentIntensity={0.3} />
+      {/* Environment sunset HDRI for natural reflections — replaces generic ambientLight */}
+      <Environment preset="sunset" environmentIntensity={0.8} />
 
       <Suspense fallback={<LoadingFallback />}>
         {children}
@@ -102,10 +112,10 @@ export default function WineryScene({
 
       <ContactShadows
         position={[0, -0.01, 0]}
-        opacity={0.4}
+        opacity={0.5}
         scale={60}
-        blur={2}
-        far={20}
+        blur={2.5}
+        far={25}
         color="#000000"
       />
 

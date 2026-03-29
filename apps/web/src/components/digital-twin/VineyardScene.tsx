@@ -1,7 +1,7 @@
 'use client'
 import React, { Suspense, useRef, useState, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Html, Text, Sky, useGLTF, Line } from '@react-three/drei'
+import { Html, Sky, useGLTF, Line } from '@react-three/drei'
 import * as THREE from 'three'
 
 /* ═══════════════════════════════════════════════════════
@@ -16,7 +16,6 @@ const POSTS_PER_ROW = 7
 const ROW_LENGTH = VINES_PER_ROW * VINE_SPACING
 const TOTAL_POSTS = ROWS * POSTS_PER_ROW
 
-/** Deterministic pseudo-random */
 function sr(seed: number) {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
   return x - Math.floor(x)
@@ -28,7 +27,7 @@ interface VineRowsProps {
 }
 
 /* ═══════════════════════════════════════════════════════
-   TERRAIN — subdivided plane with multi-octave displacement
+   TERRAIN — 128×128 with multi-octave displacement
    ═══════════════════════════════════════════════════════ */
 function Terrain() {
   const ref = useRef<THREE.Mesh>(null)
@@ -39,7 +38,6 @@ function Terrain() {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)
       const y = pos.getY(i)
-      // Multi-octave noise for natural undulation
       const h =
         Math.sin(x * 0.15) * Math.cos(y * 0.12) * 0.5 +
         Math.sin(x * 0.4 + 1.7) * Math.cos(y * 0.35 + 0.9) * 0.2 +
@@ -59,30 +57,7 @@ function Terrain() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   VINE MATERIAL — onBeforeCompile adds emissive from instanceColor
-   ═══════════════════════════════════════════════════════ */
-function useVineMaterial() {
-  return useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      roughness: 0.72,
-      metalness: 0.0,
-      side: THREE.DoubleSide,
-    })
-    mat.onBeforeCompile = (shader) => {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-         #ifdef USE_INSTANCING_COLOR
-           totalEmissiveRadiance += vColor * 0.35;
-         #endif`
-      )
-    }
-    return mat
-  }, [])
-}
-
-/* ═══════════════════════════════════════════════════════
-   VINE INSTANCING — shared transform + animated color logic
+   VINE INSTANCING — animated emissive color pulse per-row
    ═══════════════════════════════════════════════════════ */
 function useVineInstancing(
   meshRef: React.RefObject<THREE.InstancedMesh>,
@@ -91,7 +66,6 @@ function useVineInstancing(
 ) {
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
-  // Position all vine instances once
   useEffect(() => {
     const mesh = meshRef.current
     if (!mesh) return
@@ -115,7 +89,6 @@ function useVineInstancing(
     mesh.instanceMatrix.needsUpdate = true
   }, [meshRef, dummy])
 
-  // Smooth emissive color pulse driven by humidity per row
   const tmpColor = useMemo(() => new THREE.Color(), [])
   useFrame(({ clock }) => {
     const mesh = meshRef.current
@@ -125,7 +98,6 @@ function useVineInstancing(
     for (let row = 0; row < ROWS; row++) {
       const hum = humidityValues[row]
       const ndvi = ndviValues[row]
-      // Pulse speed & amplitude scales with humidity
       const pulse =
         1 +
         Math.sin(t * (0.3 + hum * 0.008) + row * 0.5) *
@@ -143,22 +115,55 @@ function useVineInstancing(
 }
 
 /* ═══════════════════════════════════════════════════════
-   GLB VINE ROWS — loads /models/vineyard.glb
+   GLB VINE ROWS — /models/vineyard.glb
+   PBR fix: override roughness/metalness, enable envMap,
+   enable shadows on all child meshes
    ═══════════════════════════════════════════════════════ */
 function GLBVineRows({ ndviValues, humidityValues }: VineRowsProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null!)
   const { scene } = useGLTF('/models/vineyard.glb')
-  const material = useVineMaterial()
 
   const geometry = useMemo(() => {
     let geo: THREE.BufferGeometry | null = null
     scene.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh && !geo) {
-        geo = (child as THREE.Mesh).geometry.clone()
-      }
+      if (!(child as THREE.Mesh).isMesh) return
+      const m = child as THREE.Mesh
+      if (!geo) geo = m.geometry.clone()
+      m.castShadow = true
+      m.receiveShadow = true
+      // Fix PBR materials — avoid flat/dark GLB appearance
+      const mats = Array.isArray(m.material) ? m.material : [m.material]
+      mats.forEach((mat) => {
+        if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+          const std = mat as THREE.MeshStandardMaterial
+          std.roughness = Math.max(std.roughness, 0.45)
+          std.metalness = Math.min(std.metalness, 0.15)
+          std.envMapIntensity = 1.0
+          std.needsUpdate = true
+        }
+      })
     })
     return geo!
   }, [scene])
+
+  const material = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      roughness: 0.5,
+      metalness: 0.1,
+      side: THREE.DoubleSide,
+      envMapIntensity: 1.0,
+    })
+    mat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+         #ifdef USE_INSTANCING_COLOR
+           totalEmissiveRadiance += vColor * 0.3;
+         #endif`
+      )
+    }
+    return mat
+  }, [])
 
   useVineInstancing(meshRef, ndviValues, humidityValues)
 
@@ -175,18 +180,35 @@ function GLBVineRows({ ndviValues, humidityValues }: VineRowsProps) {
 useGLTF.preload('/models/vineyard.glb')
 
 /* ═══════════════════════════════════════════════════════
-   PROCEDURAL FALLBACK — organic canopy shape (not cubes)
+   PROCEDURAL FALLBACK — organic canopy shape
    ═══════════════════════════════════════════════════════ */
 function FallbackVineRows({ ndviValues, humidityValues }: VineRowsProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null!)
-  const material = useVineMaterial()
+
+  const material = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      roughness: 0.5,
+      metalness: 0.1,
+      side: THREE.DoubleSide,
+      envMapIntensity: 1.0,
+    })
+    mat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+         #ifdef USE_INSTANCING_COLOR
+           totalEmissiveRadiance += vColor * 0.3;
+         #endif`
+      )
+    }
+    return mat
+  }, [])
 
   const geometry = useMemo(() => {
     const geo = new THREE.IcosahedronGeometry(0.22, 1)
     geo.translate(0, 0.65, 0)
     const p = geo.attributes.position as THREE.BufferAttribute
     for (let i = 0; i < p.count; i++) {
-      // Flatten vertically, widen horizontally for bush shape
       p.setY(i, p.getY(i) * 0.55)
       p.setX(i, p.getX(i) * 1.35 + (sr(i * 7) - 0.5) * 0.04)
       p.setZ(i, p.getZ(i) * 1.35 + (sr(i * 13) - 0.5) * 0.04)
@@ -319,18 +341,16 @@ function SensorNode({
         <meshStandardMaterial
           color={color}
           emissive={color}
-          emissiveIntensity={hovered ? 2.5 : 1.2}
+          emissiveIntensity={hovered ? 3.0 : 1.5}
           transparent
           opacity={0.95}
           toneMapped={false}
         />
       </mesh>
-      {/* Animated pulse ring */}
       <mesh ref={ringRef} position={position} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.18, 0.22, 32]} />
         <meshBasicMaterial color={color} transparent opacity={0.25} side={THREE.DoubleSide} />
       </mesh>
-      {/* Outer glow ring */}
       <mesh position={position} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.25, 0.35, 32]} />
         <meshBasicMaterial color={color} transparent opacity={0.08} side={THREE.DoubleSide} />
@@ -348,7 +368,7 @@ function SensorNode({
 }
 
 /* ═══════════════════════════════════════════════════════
-   DRONE MODEL — orbiting survey UAV
+   DRONE MODEL
    ═══════════════════════════════════════════════════════ */
 function DroneModel() {
   const ref = useRef<THREE.Group>(null)
@@ -367,12 +387,7 @@ function DroneModel() {
         <meshStandardMaterial color="#2A2A2A" metalness={0.9} roughness={0.15} />
       </mesh>
       {(
-        [
-          [-0.4, 0, -0.28],
-          [0.4, 0, -0.28],
-          [-0.4, 0, 0.28],
-          [0.4, 0, 0.28],
-        ] as [number, number, number][]
+        [[-0.4, 0, -0.28], [0.4, 0, -0.28], [-0.4, 0, 0.28], [0.4, 0, 0.28]] as [number, number, number][]
       ).map((p, i) => (
         <group key={i} position={p}>
           <mesh>
@@ -461,14 +476,12 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
       <Terrain />
       <TrellisSystem />
 
-      {/* GLB vine instances → procedural fallback if model absent */}
       <VineModelBoundary fallback={fallbackRows}>
         <Suspense fallback={fallbackRows}>
           <GLBVineRows ndviValues={ndviValues} humidityValues={humidityValues} />
         </Suspense>
       </VineModelBoundary>
 
-      {/* IoT Sensors — high emissive for Bloom glow */}
       <SensorNode position={[-12, 1.5, -4]} label="T/HR Campo" value="19°C | 68% HR" color="#60A5FA" />
       <SensorNode position={[0, 1.2, 5]} label="Sonda Suelo 30cm" value="57% humedad | 16°C" color="#22C55E" />
       <SensorNode position={[10, 1.5, -3]} label="Sensor Hoja" value="Potencial: -0.4 MPa" color="#FBBF24" />
@@ -477,15 +490,7 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
       <DroneModel />
       <WineryBuilding />
 
-      {/* Boundary markers */}
-      {(
-        [
-          [-18, 0.12, -9],
-          [18, 0.12, -9],
-          [-18, 0.12, 9],
-          [18, 0.12, 9],
-        ] as [number, number, number][]
-      ).map((p, i) => (
+      {([[-18, 0.12, -9], [18, 0.12, -9], [-18, 0.12, 9], [18, 0.12, 9]] as [number, number, number][]).map((p, i) => (
         <mesh key={i} position={p} castShadow>
           <cylinderGeometry args={[0.08, 0.1, 0.25, 8]} />
           <meshStandardMaterial color="#777" roughness={0.9} />
