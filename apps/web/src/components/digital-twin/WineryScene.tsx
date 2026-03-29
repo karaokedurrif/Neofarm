@@ -1,7 +1,7 @@
 'use client'
 import { Canvas } from '@react-three/fiber'
 import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { EffectComposer, Bloom, SSAO } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, SSAO, Vignette } from '@react-three/postprocessing'
 import { Suspense } from 'react'
 
 interface WinerySceneProps {
@@ -43,13 +43,14 @@ function PostProcessing() {
       <Bloom
         luminanceThreshold={0.6}
         luminanceSmoothing={0.9}
-        intensity={0.4}
+        intensity={0.5}
       />
       <SSAO
-        radius={0.1}
-        intensity={15}
-        luminanceInfluence={0.6}
+        radius={0.12}
+        intensity={18}
+        luminanceInfluence={0.5}
       />
+      <Vignette eskil={false} offset={0.3} darkness={0.55} />
     </EffectComposer>
   )
 }
