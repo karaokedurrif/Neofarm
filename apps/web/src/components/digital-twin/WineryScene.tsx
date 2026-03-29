@@ -41,7 +41,7 @@ function SceneLighting() {
 
 function PostProcessing() {
   return (
-    <EffectComposer>
+    <EffectComposer normalPass>
       <Bloom
         luminanceThreshold={1}
         luminanceSmoothing={0.9}

@@ -177,7 +177,6 @@ function GLBVineRows({ ndviValues, humidityValues }: VineRowsProps) {
     />
   )
 }
-useGLTF.preload('/models/vineyard.glb')
 
 /* ═══════════════════════════════════════════════════════
    PROCEDURAL FALLBACK — organic canopy shape
