@@ -5,33 +5,26 @@ const config: Config = {
     './src/**/*.{js,ts,jsx,tsx,mdx}',
     '../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        bodega: {
-          50: '#fdf8f6',
-          100: '#f2e8e5',
-          200: '#eaddd7',
-          300: '#e0cec7',
-          400: '#d2bab0',
-          500: '#bfa094',
-          600: '#a18072',
-          700: '#977669',
-          800: '#846358',
-          900: '#6f524a',
+        burdeos: {
+          DEFAULT: '#7F1D1D',
+          light: '#991B1B',
+          dark: '#5C1616',
         },
-        wine: {
-          50: '#fef2f2',
-          100: '#fde6e6',
-          200: '#fbd0d0',
-          300: '#f8abab',
-          400: '#f27878',
-          500: '#e84949',
-          600: '#d42a2a',
-          700: '#722f37',
-          800: '#5a1e24',
-          900: '#3d1218',
+        dorado: {
+          DEFAULT: '#D4A843',
+          light: '#E0BC6A',
+          dark: '#B8902E',
         },
+        surface: {
+          DEFAULT: '#1A1A1A',
+          hover: '#262626',
+          border: '#333333',
+        },
+        bg: '#0F0F0F',
       },
     },
   },
