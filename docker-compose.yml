@@ -1,0 +1,92 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: bodegadata-db
+    environment:
+      POSTGRES_DB: bodegadata
+      POSTGRES_USER: bodegadata_user
+      POSTGRES_PASSWORD: bodegadata_pass
+    volumes:
+      - bodegadata-db-data:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    networks:
+      - bodegadata-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bodegadata_user -d bodegadata"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: bodegadata-api
+    environment:
+      - DATABASE_URL=postgresql://bodegadata_user:bodegadata_pass@db:5432/bodegadata
+      - SECRET_KEY=${SECRET_KEY:-bodegadata-secret-change-me}
+      - PYTHONUNBUFFERED=1
+      - CORS_ORIGINS=https://hub.bodegadata.com,https://api.bodegadata.com
+    volumes:
+      - ./apps/api:/app
+      - bodegadata-photos:/app/photos
+    ports:
+      - "8005:8000"
+    depends_on:
+      - db
+    networks:
+      - bodegadata-network
+      - proxy
+    restart: unless-stopped
+
+  # Next.js Web App
+  web:
+    image: node:20-alpine
+    container_name: bodegadata-web
+    working_dir: /workspace
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.bodegadata.com
+      - NEXT_PUBLIC_APP_NAME=BodegaData Hub
+    volumes:
+      - .:/workspace
+    ports:
+      - "3004:3000"
+    command: sh /workspace/start-web.sh
+    networks:
+      - bodegadata-network
+      - proxy
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  # Mosquitto MQTT Broker
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: bodegadata-mqtt
+    ports:
+      - "1887:1883"
+      - "9005:9001"
+    volumes:
+      - ./mqtt/config:/mosquitto/config
+      - ./mqtt/data:/mosquitto/data
+      - ./mqtt/log:/mosquitto/log
+      - bodegadata-mqtt-data:/mosquitto/data
+    networks:
+      - bodegadata-network
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto/config/mosquitto.conf
+
+volumes:
+  bodegadata-db-data:
+  bodegadata-photos:
+  bodegadata-mqtt-data:
+
+networks:
+  bodegadata-network:
+    driver: bridge
+  proxy:
+    external: true
