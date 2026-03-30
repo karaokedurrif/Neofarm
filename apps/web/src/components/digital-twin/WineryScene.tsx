@@ -33,8 +33,8 @@ function SceneLighting() {
       <directionalLight position={[10, 8, 15]} intensity={0.6} color="#B08050" />
       {/* Rim light for depth separation */}
       <pointLight position={[0, 12, -20]} intensity={0.5} color="#FF6633" />
-      {/* Subtle hemisphere for ambient bounce */}
-      <hemisphereLight args={['#FFD4A0', '#3D2B1F', 0.15]} />
+      {/* Very subtle hemisphere — avoid flattening scene */}
+      <hemisphereLight args={['#FFD4A0', '#3D2B1F', 0.08]} />
     </>
   )
 }
@@ -80,7 +80,7 @@ export default function WineryScene({
       }}
       style={{ background: '#0F0F0F' }}
     >
-      <fog attach="fog" args={['#1A0F05', 50, 120]} />
+      <fog attach="fog" args={['#2A1A0A', 35, 90]} />
       <color attach="background" args={['#0F0F0F']} />
 
       <PerspectiveCamera makeDefault position={cameraPosition} fov={45} near={0.1} far={200} />

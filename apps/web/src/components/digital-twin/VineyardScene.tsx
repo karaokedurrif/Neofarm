@@ -63,23 +63,44 @@ function createStoneTexture(w = 256, h = 256): THREE.DataTexture {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4
-      // Stone block pattern
       const bx = Math.floor(x / 32), by = Math.floor(y / 24)
       const offsetRow = (by % 2 === 0) ? 0 : 16
       const localX = (x + offsetRow) % 32, localY = y % 24
       const isMortar = localX < 1 || localY < 1
-      // Noise for stone variation
       const n = fbm(x * 0.05, y * 0.05, 3)
       const blockNoise = hash(bx + offsetRow, by)
       if (isMortar) {
         data[i] = 100; data[i + 1] = 90; data[i + 2] = 78; data[i + 3] = 255
       } else {
         const base = 120 + blockNoise * 50 + n * 30
-        data[i] = Math.min(255, base * 0.85)       // R
-        data[i + 1] = Math.min(255, base * 0.78)   // G
-        data[i + 2] = Math.min(255, base * 0.65)   // B
+        data[i] = Math.min(255, base * 0.85)
+        data[i + 1] = Math.min(255, base * 0.78)
+        data[i + 2] = Math.min(255, base * 0.65)
         data[i + 3] = 255
       }
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(4, 3)
+  tex.needsUpdate = true
+  return tex
+}
+
+/** Create a stone displacement map (height per-texel for stone relief) */
+function createStoneDisplacementMap(w = 256, h = 256): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      const bx = Math.floor(x / 32), by = Math.floor(y / 24)
+      const offsetRow = (by % 2 === 0) ? 0 : 16
+      const localX = (x + offsetRow) % 32, localY = y % 24
+      const isMortar = localX < 1 || localY < 1
+      // Mortar is recessed, stones protrude with noise variation
+      const stoneHeight = isMortar ? 0 : 80 + hash(bx + offsetRow, by) * 80 + fbm(x * 0.1, y * 0.1, 2) * 40
+      const v = Math.min(255, Math.max(0, stoneHeight))
+      data[i] = v; data[i + 1] = v; data[i + 2] = v; data[i + 3] = 255
     }
   }
   const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
@@ -151,15 +172,35 @@ function createLeafTexture(w = 64, h = 64): THREE.DataTexture {
 }
 
 /* ═══════════════════════════════════════════════════════
-   TERRAIN — displaced with procedural soil normal map
+   TERRAIN — displaced with vertex colors (earth/grass)
    ═══════════════════════════════════════════════════════ */
 function Terrain() {
   const ref = useRef<THREE.Mesh>(null)
   const normalMap = useMemo(() => createSoilNormalMap(), [])
+  const bumpMap = useMemo(() => {
+    // Reuse noise as a bump texture for micro-relief
+    const w = 256, h = 256
+    const data = new Uint8Array(w * h * 4)
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4
+        const v = Math.min(255, fbm(x * 0.12, y * 0.12, 4) * 255)
+        data[i] = v; data[i + 1] = v; data[i + 2] = v; data[i + 3] = 255
+      }
+    }
+    const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+    tex.repeat.set(12, 12)
+    tex.needsUpdate = true
+    return tex
+  }, [])
 
   useEffect(() => {
     if (!ref.current) return
-    const pos = ref.current.geometry.attributes.position as THREE.BufferAttribute
+    const geo = ref.current.geometry
+    const pos = geo.attributes.position as THREE.BufferAttribute
+    // Vertex colors: earth with grass patches
+    const colors = new Float32Array(pos.count * 3)
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)
       const y = pos.getY(i)
@@ -168,23 +209,43 @@ function Terrain() {
         Math.sin(x * 0.08) * Math.cos(y * 0.06) * 0.8 +
         Math.sin(x * 0.25 + 1.7) * Math.cos(y * 0.22 + 0.9) * 0.3 +
         Math.sin(x * 0.6 + 3.1) * Math.cos(y * 0.55 + 2.4) * 0.1 +
-        // Additional fine noise for soil clumps
         fbm(x * 0.3, y * 0.3, 3) * 0.15
       pos.setZ(i, h)
+      // Color noise: blend dry earth, wet earth, grass patches
+      const n1 = fbm(x * 0.06 + 100, y * 0.06 + 200, 3)  // large patches
+      const n2 = fbm(x * 0.2 + 50, y * 0.2 + 80, 2)       // detail
+      const grassMask = n1 > 0.55 ? (n1 - 0.55) * 4 : 0    // 0-1 grass blend
+      const wetMask = n2 < 0.3 ? (0.3 - n2) * 2 : 0        // darker wet patches
+      // Base dry earth
+      let r = 0.29, g = 0.22, b = 0.16
+      // Blend grass (olive green)
+      r += grassMask * (-0.12 + n2 * 0.04)
+      g += grassMask * (0.12 + n2 * 0.05)
+      b += grassMask * (-0.04)
+      // Darker wet patches
+      r -= wetMask * 0.06
+      g -= wetMask * 0.04
+      b -= wetMask * 0.02
+      colors[i * 3] = Math.max(0, Math.min(1, r))
+      colors[i * 3 + 1] = Math.max(0, Math.min(1, g))
+      colors[i * 3 + 2] = Math.max(0, Math.min(1, b))
     }
     pos.needsUpdate = true
-    ref.current.geometry.computeVertexNormals()
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    geo.computeVertexNormals()
   }, [])
 
   return (
     <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
       <planeGeometry args={[100, 100, 160, 160]} />
       <meshStandardMaterial
-        color="#4A3728"
-        roughness={0.95}
+        vertexColors
+        roughness={0.96}
         metalness={0}
         normalMap={normalMap}
-        normalScale={new THREE.Vector2(0.8, 0.8)}
+        normalScale={new THREE.Vector2(1.0, 1.0)}
+        bumpMap={bumpMap}
+        bumpScale={0.15}
       />
     </mesh>
   )
@@ -249,8 +310,8 @@ function VineTrunks() {
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, TOTAL_VINES]} castShadow>
-      <cylinderGeometry args={[0.015, 0.02, 0.55, 5]} />
-      <meshStandardMaterial color="#5C4033" roughness={0.92} metalness={0.02} />
+      <cylinderGeometry args={[0.025, 0.035, 0.55, 6]} />
+      <meshStandardMaterial color="#5C4033" roughness={1.0} metalness={0} />
     </instancedMesh>
   )
 }
@@ -589,13 +650,49 @@ function DroneModel() {
    ═══════════════════════════════════════════════════════ */
 function WineryBuilding() {
   const stoneTex = useMemo(() => createStoneTexture(), [])
+  const stoneDispMap = useMemo(() => createStoneDisplacementMap(), [])
+  const stoneNormalMap = useMemo(() => {
+    // Derive normal from displacement for bump relief on facade
+    const w = 256, h = 256
+    const data = new Uint8Array(w * h * 4)
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4
+        const bx = Math.floor(x / 32), by = Math.floor(y / 24)
+        const offsetRow = (by % 2 === 0) ? 0 : 16
+        const lx = (x + offsetRow) % 32, ly = y % 24
+        const isMortar = lx < 1 || ly < 1
+        const hC = isMortar ? 0 : 0.5 + hash(bx + offsetRow, by) * 0.3
+        const hR = ((x + 1 + offsetRow) % 32 < 1) ? 0 : 0.5 + hash(Math.floor((x + 1) / 32) + offsetRow, by) * 0.3
+        const hU = ((y + 1) % 24 < 1) ? 0 : 0.5 + hash(bx + offsetRow, Math.floor((y + 1) / 24)) * 0.3
+        const dx = (hR - hC) * 4.0, dy = (hU - hC) * 4.0
+        data[i] = Math.min(255, Math.max(0, (dx * 0.5 + 0.5) * 255))
+        data[i + 1] = Math.min(255, Math.max(0, (dy * 0.5 + 0.5) * 255))
+        data[i + 2] = 200
+        data[i + 3] = 255
+      }
+    }
+    const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+    tex.repeat.set(4, 3)
+    tex.needsUpdate = true
+    return tex
+  }, [])
 
   return (
     <group position={[0, 0, -22]}>
-      {/* Main building body — stone textured */}
+      {/* Main building body — stone textured with displacement relief */}
       <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[16, 5.5, 9]} />
-        <meshStandardMaterial map={stoneTex} roughness={0.88} metalness={0.03} />
+        <boxGeometry args={[16, 5.5, 9, 32, 24, 16]} />
+        <meshStandardMaterial
+          map={stoneTex}
+          normalMap={stoneNormalMap}
+          normalScale={new THREE.Vector2(1.2, 1.2)}
+          displacementMap={stoneDispMap}
+          displacementScale={0.08}
+          roughness={0.92}
+          metalness={0.02}
+        />
       </mesh>
 
       {/* Roof ridge beam */}
@@ -604,35 +701,52 @@ function WineryBuilding() {
         <meshStandardMaterial color="#5C4033" roughness={0.9} metalness={0.05} />
       </mesh>
 
-      {/* Tile roof — front slope */}
+      {/* Tile roof — front slope with eaves overhang */}
       <group position={[0, 5.7, 2.5]} rotation={[0.35, 0, 0]}>
-        {/* Base roof plane */}
         <mesh castShadow receiveShadow>
-          <boxGeometry args={[17.5, 0.12, 5.5]} />
+          <boxGeometry args={[18.5, 0.12, 6.2]} />
           <meshStandardMaterial color="#8B4513" roughness={0.92} metalness={0.02} />
         </mesh>
-        {/* Tile rows — overlapping ridges */}
-        {Array.from({ length: 10 }, (_, i) => (
-          <mesh key={`tile-f-${i}`} position={[0, 0.09, -2.5 + i * 0.55]} castShadow>
-            <boxGeometry args={[17.5, 0.06, 0.3]} />
+        {Array.from({ length: 11 }, (_, i) => (
+          <mesh key={`tile-f-${i}`} position={[0, 0.09, -3.0 + i * 0.56]} castShadow>
+            <boxGeometry args={[18.5, 0.06, 0.3]} />
             <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
           </mesh>
         ))}
+        {/* Eaves — protruding fascia board under front roof edge */}
+        <mesh position={[0, -0.1, 3.15]} castShadow>
+          <boxGeometry args={[18.5, 0.2, 0.15]} />
+          <meshStandardMaterial color="#5C4033" roughness={0.9} />
+        </mesh>
       </group>
 
-      {/* Tile roof — back slope */}
+      {/* Tile roof — back slope with eaves */}
       <group position={[0, 5.7, -2.5]} rotation={[-0.35, 0, 0]}>
         <mesh castShadow receiveShadow>
-          <boxGeometry args={[17.5, 0.12, 5.5]} />
+          <boxGeometry args={[18.5, 0.12, 6.2]} />
           <meshStandardMaterial color="#8B4513" roughness={0.92} metalness={0.02} />
         </mesh>
-        {Array.from({ length: 10 }, (_, i) => (
-          <mesh key={`tile-b-${i}`} position={[0, 0.09, -2.5 + i * 0.55]} castShadow>
-            <boxGeometry args={[17.5, 0.06, 0.3]} />
+        {Array.from({ length: 11 }, (_, i) => (
+          <mesh key={`tile-b-${i}`} position={[0, 0.09, -3.0 + i * 0.56]} castShadow>
+            <boxGeometry args={[18.5, 0.06, 0.3]} />
             <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
           </mesh>
         ))}
+        <mesh position={[0, -0.1, -3.15]} castShadow>
+          <boxGeometry args={[18.5, 0.2, 0.15]} />
+          <meshStandardMaterial color="#5C4033" roughness={0.9} />
+        </mesh>
       </group>
+
+      {/* Gable-side eaves (left and right) */}
+      <mesh position={[8.8, 5.55, 0]} castShadow>
+        <boxGeometry args={[0.6, 0.18, 10.2]} />
+        <meshStandardMaterial color="#5C4033" roughness={0.9} />
+      </mesh>
+      <mesh position={[-8.8, 5.55, 0]} castShadow>
+        <boxGeometry args={[0.6, 0.18, 10.2]} />
+        <meshStandardMaterial color="#5C4033" roughness={0.9} />
+      </mesh>
 
       {/* Entrance archway */}
       <mesh position={[0, 1.8, 4.51]}>
@@ -669,10 +783,18 @@ function WineryBuilding() {
         </group>
       ))}
 
-      {/* Side extension — also stone textured */}
+      {/* Side extension — stone textured with relief */}
       <mesh position={[-10, 1.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[5, 3.5, 7]} />
-        <meshStandardMaterial map={stoneTex} roughness={0.9} metalness={0.02} />
+        <boxGeometry args={[5, 3.5, 7, 12, 8, 12]} />
+        <meshStandardMaterial
+          map={stoneTex}
+          normalMap={stoneNormalMap}
+          normalScale={new THREE.Vector2(1.0, 1.0)}
+          displacementMap={stoneDispMap}
+          displacementScale={0.05}
+          roughness={0.92}
+          metalness={0.02}
+        />
       </mesh>
       {/* Extension roof */}
       <group position={[-10, 3.5, 0]} rotation={[0.2, 0, 0]}>
