@@ -1,6 +1,20 @@
 'use client'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
 import PageShell from '@/components/shared/PageShell'
 import { Snowflake, Thermometer, Wind, AlertTriangle, ShieldCheck } from 'lucide-react'
+
+const FrostVisualization3D = dynamic(
+  () => import('@/components/frost/FrostVisualization3D'),
+  { ssr: false, loading: () => (
+    <div className="h-[420px] rounded-xl flex items-center justify-center" style={{ background: 'var(--surface)' }}>
+      <div className="text-center">
+        <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
+        <p className="text-xs text-[var(--text-muted)]">Cargando visualización 3D…</p>
+      </div>
+    </div>
+  )}
+)
 
 const zones = [
   { name: 'Zona NE', risk: 'Bajo', temp: 3.2, minForecast: 1.5, aspersores: true, status: 'Standby' },
@@ -47,6 +61,43 @@ export default function FrostPage() {
             </div>
           )
         })}
+      </div>
+
+      {/* 3D Frost Visualization */}
+      <div className="card-flat p-4 relative">
+        <Suspense fallback={null}>
+          <FrostVisualization3D />
+        </Suspense>
+      </div>
+
+      {/* 72h Prediction Chart */}
+      <div className="card-flat overflow-hidden">
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+          <Thermometer className="w-4 h-4" style={{ color: 'var(--info)' }} />
+          <h3 className="font-medium">Predicción 72h</h3>
+        </div>
+        <div className="px-4 py-4">
+          <div className="flex items-end gap-1 h-24">
+            {[3.2, 2.8, 1.5, 0.8, -0.2, -1.5, -2.1, -1.8, -0.5, 0.3, 1.2, 2.0, 2.8, 3.5, 4.0, 3.8, 3.2, 2.5, 1.8, 1.0, 0.2, -0.8, -1.2, -0.5].map((t, i) => {
+              const h = Math.max(4, ((t + 3) / 7) * 96)
+              const color = t < 0 ? 'var(--danger)' : t < 2 ? 'var(--warning)' : 'var(--success)'
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                  <div className="w-full rounded-t" style={{ height: h, background: color, opacity: 0.7, minHeight: 4 }} />
+                  <span className="text-[8px] font-mono text-[var(--text-muted)]">{i * 3}h</span>
+                  <div className="absolute -top-5 hidden group-hover:block text-[9px] font-mono px-1 py-0.5 rounded" style={{ background: 'var(--surface)', color, border: '1px solid var(--border)' }}>
+                    {t.toFixed(1)}°
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex items-center gap-4 mt-3 text-[10px] text-[var(--text-muted)]">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: 'var(--danger)' }} /> &lt; 0°C Helada</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: 'var(--warning)' }} /> 0–2°C Riesgo</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: 'var(--success)' }} /> &gt; 2°C Seguro</span>
+          </div>
+        </div>
       </div>
 
       <div className="card-flat overflow-hidden">

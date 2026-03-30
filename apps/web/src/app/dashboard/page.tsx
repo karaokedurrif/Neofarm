@@ -10,6 +10,8 @@ import VineyardPlane from '@/components/dashboard/VineyardPlane'
 import CellarPlane from '@/components/dashboard/CellarPlane'
 import BarrelPlane from '@/components/dashboard/BarrelPlane'
 import KPICards from '@/components/dashboard/KPICards'
+import GlobalStatusBar from '@/components/dashboard/GlobalStatusBar'
+import BiodynamicMiniCalendar from '@/components/calendar/BiodynamicMiniCalendar'
 
 const DigitalTwinManager = dynamic(
   () => import('@/components/digital-twin/DigitalTwinManager'),
@@ -188,6 +190,9 @@ export default function DashboardPage() {
 
   return (
     <div className="p-5 space-y-5">
+      {/* Bloomberg-style Global Status Bar */}
+      <GlobalStatusBar />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -264,6 +269,7 @@ export default function DashboardPage() {
         {/* Right sidebar: widgets */}
         <div className="space-y-4">
           <WeatherWidget />
+          <BiodynamicMiniCalendar />
           <AlertFeed />
           <ActivityTimeline />
         </div>
