@@ -16,7 +16,7 @@ function SceneLighting() {
   return (
     <>
       <directionalLight
-        position={[20, 30, 10]}
+        position={[-30, 20, 10]}
         intensity={4.0}
         color="#ffffff" 
         castShadow
@@ -37,11 +37,12 @@ function SceneLighting() {
 // 2. POST-PROCESADO: Ajustamos la Oclusión Ambiental para detalles en paredes
 function PostProcessing() {
   return (
-    <EffectComposer multisampling={4}>
+    <EffectComposer multisampling={0} enableNormalPass>
       <N8AO
         aoRadius={0.5}
         intensity={2.5}
         distanceFalloff={0.8}
+        screenSpaceRadius
       />
       <Bloom
         luminanceThreshold={1.5}
@@ -73,7 +74,7 @@ export default function WineryScene({
       <fog attach="fog" args={['#dae4ee', 50, 150]} />
       
       {/* Añadimos un cielo físico para reflejos naturales */}
-      <Sky sunPosition={[20, 30, 10]} inclination={0.5} azimuth={0.25} />
+      <Sky sunPosition={[-30, 20, 10]} inclination={0.5} azimuth={0.25} />
 
       <PerspectiveCamera makeDefault position={cameraPosition} fov={40} />
       <OrbitControls

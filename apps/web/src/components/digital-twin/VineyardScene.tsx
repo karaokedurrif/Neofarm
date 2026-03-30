@@ -73,9 +73,11 @@ function createStoneTexture(w = 256, h = 256): THREE.DataTexture {
         data[i] = 100; data[i + 1] = 90; data[i + 2] = 78; data[i + 3] = 255
       } else {
         const base = 120 + blockNoise * 50 + n * 30
-        data[i] = Math.min(255, base * 0.85)
-        data[i + 1] = Math.min(255, base * 0.78)
-        data[i + 2] = Math.min(255, base * 0.65)
+        // Procedural albedo stain — fbm modulates brightness per stone
+        const stain = 0.7 + fbm(x * 0.03 + bx * 2.7, y * 0.03 + by * 3.1, 4) * 0.5
+        data[i] = Math.min(255, base * 0.85 * stain)
+        data[i + 1] = Math.min(255, base * 0.78 * stain)
+        data[i + 2] = Math.min(255, base * 0.65 * stain)
         data[i + 3] = 255
       }
     }
@@ -705,7 +707,8 @@ function WineryBuilding() {
           displacementScale={0.1}
           roughness={0.9}
           metalness={0.02}
-          envMapIntensity={0.7}
+          envMapIntensity={1.5}
+          flatShading={false}
         />
       </RoundedBox>
 
@@ -806,7 +809,8 @@ function WineryBuilding() {
           displacementScale={0.06}
           roughness={0.9}
           metalness={0.02}
-          envMapIntensity={0.7}
+          envMapIntensity={1.5}
+          flatShading={false}
         />
       </RoundedBox>
       {/* Extension roof */}
