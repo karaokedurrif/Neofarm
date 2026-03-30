@@ -658,187 +658,293 @@ function DroneModel() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   WINERY BUILDING — stone texture + real tile roof
+   CONTEMPORARY WINERY — Protos / Foster + Partners style
+   Concrete + Corten steel + tinted glass + I-beams
    ═══════════════════════════════════════════════════════ */
 
-/** Generate a normal map from the stone brick pattern using gradient computation */
-function createStoneNormalMap(w = 256, h = 256): THREE.DataTexture {
+/** Procedural concrete normal map — formwork lines + micro-pores */
+function createConcreteNormalMap(w = 256, h = 256): THREE.DataTexture {
   const data = new Uint8Array(w * h * 4)
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4
-      const bx = Math.floor(x / 32), by = Math.floor(y / 24)
-      const offsetRow = (by % 2 === 0) ? 0 : 16
-      const lx = (x + offsetRow) % 32, ly = y % 24
-      const isMortar = lx < 1 || ly < 1
-      // Height at current, right, and up neighbors
-      const hC = isMortar ? 0 : 0.5 + hash(bx + offsetRow, by) * 0.3 + fbm(x * 0.08, y * 0.08, 3) * 0.2
-      const hR = ((x + 1 + offsetRow) % 32 < 1) ? 0 : 0.5 + hash(Math.floor((x + 1) / 32) + offsetRow, by) * 0.3 + fbm((x + 1) * 0.08, y * 0.08, 3) * 0.2
-      const hU = ((y + 1) % 24 < 1) ? 0 : 0.5 + hash(bx + offsetRow, Math.floor((y + 1) / 24)) * 0.3 + fbm(x * 0.08, (y + 1) * 0.08, 3) * 0.2
-      // Gradient → normal
-      const dx = (hR - hC) * 4.0, dy = (hU - hC) * 4.0
+      // Formwork board lines every 32px
+      const boardEdge = y % 32 < 1 ? 0.3 : 0
+      const pore = fbm(x * 0.15, y * 0.15, 4) * 0.4
+      const hC = 0.5 + pore - boardEdge
+      const hR = 0.5 + fbm((x + 1) * 0.15, y * 0.15, 4) * 0.4 - ((y % 32 < 1) ? 0.3 : 0)
+      const hU = 0.5 + fbm(x * 0.15, (y + 1) * 0.15, 4) * 0.4 - (((y + 1) % 32 < 1) ? 0.3 : 0)
+      const dx = (hR - hC) * 3.0, dy = (hU - hC) * 3.0
       data[i] = Math.min(255, Math.max(0, (dx * 0.5 + 0.5) * 255))
       data[i + 1] = Math.min(255, Math.max(0, (dy * 0.5 + 0.5) * 255))
-      data[i + 2] = 200 // Z component — mostly pointing up
+      data[i + 2] = 210
       data[i + 3] = 255
     }
   }
   const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-  tex.repeat.set(4, 3)
+  tex.repeat.set(6, 4)
+  tex.needsUpdate = true
+  return tex
+}
+
+/** Procedural corten steel texture — rust orange with dark streaks */
+function createCortenTexture(w = 128, h = 128): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      const n1 = fbm(x * 0.06, y * 0.06, 4)
+      const n2 = fbm(x * 0.12 + 50, y * 0.12 + 80, 3)
+      const streak = Math.max(0, Math.sin(y * 0.3 + n1 * 4) * 0.3)
+      const base = 0.45 + n1 * 0.25 - streak
+      data[i] = Math.min(255, Math.max(0, (base * 0.85 + n2 * 0.08) * 255))     // R rust
+      data[i + 1] = Math.min(255, Math.max(0, (base * 0.42 + n2 * 0.04) * 255)) // G
+      data[i + 2] = Math.min(255, Math.max(0, (base * 0.18) * 255))              // B
+      data[i + 3] = 255
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(3, 2)
   tex.needsUpdate = true
   return tex
 }
 
 function WineryBuilding() {
-  const stoneTex = useMemo(() => createStoneTexture(), [])
-  const stoneDispMap = useMemo(() => createStoneDisplacementMap(), [])
-  const stoneNormalMap = useMemo(() => createStoneNormalMap(), [])
+  const concreteNormal = useMemo(() => createConcreteNormalMap(), [])
+  const cortenTex = useMemo(() => createCortenTexture(), [])
+  const stoneNormal = useMemo(() => {
+    const w = 256, h = 256
+    const data = new Uint8Array(w * h * 4)
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4
+        const bx = Math.floor(x / 32), by = Math.floor(y / 24)
+        const offsetRow = (by % 2 === 0) ? 0 : 16
+        const lx = (x + offsetRow) % 32, ly = y % 24
+        const isMortar = lx < 1 || ly < 1
+        const hC = isMortar ? 0 : 0.5 + hash(bx + offsetRow, by) * 0.3 + fbm(x * 0.08, y * 0.08, 3) * 0.2
+        const hR = ((x + 1 + offsetRow) % 32 < 1) ? 0 : 0.5 + hash(Math.floor((x + 1) / 32) + offsetRow, by) * 0.3 + fbm((x + 1) * 0.08, y * 0.08, 3) * 0.2
+        const hU = ((y + 1) % 24 < 1) ? 0 : 0.5 + hash(bx + offsetRow, Math.floor((y + 1) / 24)) * 0.3 + fbm(x * 0.08, (y + 1) * 0.08, 3) * 0.2
+        const dx = (hR - hC) * 4.0, dy = (hU - hC) * 4.0
+        data[i] = Math.min(255, Math.max(0, (dx * 0.5 + 0.5) * 255))
+        data[i + 1] = Math.min(255, Math.max(0, (dy * 0.5 + 0.5) * 255))
+        data[i + 2] = 200
+        data[i + 3] = 255
+      }
+    }
+    const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+    tex.repeat.set(4, 3)
+    tex.needsUpdate = true
+    return tex
+  }, [])
 
   return (
     <group position={[0, 0, -22]}>
-      {/* Main building body — RoundedBox for beveled edges */}
-      <RoundedBox args={[16, 5.5, 9]} radius={0.04} smoothness={4} position={[0, 2.5, 0]} castShadow receiveShadow>
+
+      {/* ━━━ MAIN NAVE — exposed concrete, elongated rectangle ━━━ */}
+      <RoundedBox args={[28, 6, 12]} radius={0.03} smoothness={4} position={[0, 2, 0]} castShadow receiveShadow>
         <meshStandardMaterial
-          map={stoneTex}
-          normalMap={stoneNormalMap}
-          normalScale={new THREE.Vector2(2.5, 2.5)}
-          displacementMap={stoneDispMap}
-          displacementScale={0.1}
-          roughness={0.9}
+          color="#B0A99A"
+          normalMap={concreteNormal}
+          normalScale={new THREE.Vector2(2.0, 2.0)}
+          roughness={0.88}
           metalness={0.02}
-          envMapIntensity={1.5}
-          flatShading={false}
+          envMapIntensity={1.2}
         />
       </RoundedBox>
 
-      {/* Roof ridge beam */}
-      <mesh position={[0, 6.2, 0]} castShadow>
-        <boxGeometry args={[17, 0.15, 0.15]} />
-        <meshStandardMaterial color="#5C4033" roughness={0.9} metalness={0.05} />
+      {/* Flat roof slab — monolithic concrete with overhang */}
+      <mesh position={[0, 5.12, 0.5]} castShadow receiveShadow>
+        <boxGeometry args={[30, 0.25, 14]} />
+        <meshStandardMaterial color="#9A9488" roughness={0.85} metalness={0.03} envMapIntensity={1.0} />
       </mesh>
 
-      {/* Tile roof — front slope with eaves overhang */}
-      <group position={[0, 5.7, 2.5]} rotation={[0.35, 0, 0]}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[18.5, 0.12, 6.2]} />
-          <meshStandardMaterial color="#8B4513" roughness={0.92} metalness={0.02} />
-        </mesh>
-        {Array.from({ length: 11 }, (_, i) => (
-          <mesh key={`tile-f-${i}`} position={[0, 0.09, -3.0 + i * 0.56]} castShadow>
-            <boxGeometry args={[18.5, 0.06, 0.3]} />
-            <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
-          </mesh>
-        ))}
-        {/* Eaves — protruding fascia board under front roof edge */}
-        <mesh position={[0, -0.1, 3.15]} castShadow>
-          <boxGeometry args={[18.5, 0.2, 0.15]} />
-          <meshStandardMaterial color="#5C4033" roughness={0.9} />
-        </mesh>
-      </group>
-
-      {/* Tile roof — back slope with eaves */}
-      <group position={[0, 5.7, -2.5]} rotation={[-0.35, 0, 0]}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[18.5, 0.12, 6.2]} />
-          <meshStandardMaterial color="#8B4513" roughness={0.92} metalness={0.02} />
-        </mesh>
-        {Array.from({ length: 11 }, (_, i) => (
-          <mesh key={`tile-b-${i}`} position={[0, 0.09, -3.0 + i * 0.56]} castShadow>
-            <boxGeometry args={[18.5, 0.06, 0.3]} />
-            <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
-          </mesh>
-        ))}
-        <mesh position={[0, -0.1, -3.15]} castShadow>
-          <boxGeometry args={[18.5, 0.2, 0.15]} />
-          <meshStandardMaterial color="#5C4033" roughness={0.9} />
-        </mesh>
-      </group>
-
-      {/* Gable-side eaves (left and right) */}
-      <mesh position={[8.8, 5.55, 0]} castShadow>
-        <boxGeometry args={[0.6, 0.18, 10.2]} />
-        <meshStandardMaterial color="#5C4033" roughness={0.9} />
-      </mesh>
-      <mesh position={[-8.8, 5.55, 0]} castShadow>
-        <boxGeometry args={[0.6, 0.18, 10.2]} />
-        <meshStandardMaterial color="#5C4033" roughness={0.9} />
-      </mesh>
-
-      {/* Entrance archway */}
-      <mesh position={[0, 1.8, 4.51]}>
-        <planeGeometry args={[3, 3.6]} />
-        <meshStandardMaterial color="#2A1F15" roughness={0.85} />
-      </mesh>
-      <mesh position={[0, 3.6, 4.52]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.5, 0.18, 8, 16, Math.PI]} />
-        <meshStandardMaterial color="#7A6A55" roughness={0.85} metalness={0.1} />
-      </mesh>
-      {/* Keystone — RoundedBox */}
-      <RoundedBox args={[0.4, 0.5, 0.2]} radius={0.02} smoothness={4} position={[0, 5.1, 4.53]} castShadow>
-        <meshStandardMaterial color="#9A8A7A" roughness={0.82} />
-      </RoundedBox>
-
-      {/* Windows with warm glow + stone frames */}
-      {([-5, -2.5, 2.5, 5] as number[]).map((x) => (
-        <group key={x}>
-          <mesh position={[x, 3.5, 4.51]}>
-            <planeGeometry args={[1, 1.4]} />
-            <meshStandardMaterial color="#1A1A1A" emissive="#FF9944" emissiveIntensity={0.4} />
-          </mesh>
-          {/* Stone window frame */}
-          <mesh position={[x, 3.5, 4.52]}>
-            <planeGeometry args={[1.2, 1.6]} />
-            <meshStandardMaterial color="#6A5A4A" roughness={0.9} />
-          </mesh>
-          {/* Window sill */}
-          <mesh position={[x, 2.75, 4.6]} castShadow>
-            <boxGeometry args={[1.3, 0.08, 0.2]} />
-            <meshStandardMaterial color="#7A6A55" roughness={0.88} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* Side extension — RoundedBox with stone texture */}
-      <RoundedBox args={[5, 3.5, 7]} radius={0.03} smoothness={4} position={[-10, 1.5, 0]} castShadow receiveShadow>
+      {/* ━━━ CORTEN STEEL WING — barrel aging / admin ━━━ */}
+      <RoundedBox args={[14, 4.5, 10]} radius={0.02} smoothness={4} position={[-12, 1.25, 0]} castShadow receiveShadow>
         <meshStandardMaterial
-          map={stoneTex}
-          normalMap={stoneNormalMap}
-          normalScale={new THREE.Vector2(2.5, 2.5)}
-          displacementMap={stoneDispMap}
-          displacementScale={0.06}
-          roughness={0.9}
-          metalness={0.02}
-          envMapIntensity={1.5}
-          flatShading={false}
+          map={cortenTex}
+          roughness={0.78}
+          metalness={0.35}
+          envMapIntensity={1.8}
         />
       </RoundedBox>
-      {/* Extension roof */}
-      <group position={[-10, 3.5, 0]} rotation={[0.2, 0, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[5.8, 0.1, 4.2]} />
-          <meshStandardMaterial color="#8B4513" roughness={0.92} />
+      {/* Corten wing flat roof */}
+      <mesh position={[-12, 3.62, 0]} castShadow>
+        <boxGeometry args={[15.5, 0.2, 11.5]} />
+        <meshStandardMaterial color="#6B3A1F" roughness={0.75} metalness={0.3} />
+      </mesh>
+
+      {/* ━━━ GLASS CURTAIN WALL — south facade ━━━ */}
+      {Array.from({ length: 8 }, (_, i) => {
+        const x = -10.5 + i * 3
+        return (
+          <group key={`glass-${i}`}>
+            {/* Tinted glass panel */}
+            <mesh position={[x, 2.5, 6.05]} receiveShadow>
+              <planeGeometry args={[2.6, 4.5]} />
+              <meshStandardMaterial
+                color="#1A2A3A"
+                roughness={0.08}
+                metalness={0.6}
+                envMapIntensity={2.5}
+                transparent
+                opacity={0.75}
+              />
+            </mesh>
+            {/* Steel mullion */}
+            <mesh position={[x - 1.3, 2.5, 6.08]} castShadow>
+              <boxGeometry args={[0.06, 4.8, 0.08]} />
+              <meshStandardMaterial color="#2A2A2A" roughness={0.3} metalness={0.85} />
+            </mesh>
+          </group>
+        )
+      })}
+      {/* Final mullion */}
+      <mesh position={[13.2, 2.5, 6.08]} castShadow>
+        <boxGeometry args={[0.06, 4.8, 0.08]} />
+        <meshStandardMaterial color="#2A2A2A" roughness={0.3} metalness={0.85} />
+      </mesh>
+      {/* Horizontal transom */}
+      <mesh position={[0, 4.85, 6.08]} castShadow>
+        <boxGeometry args={[27, 0.06, 0.08]} />
+        <meshStandardMaterial color="#2A2A2A" roughness={0.3} metalness={0.85} />
+      </mesh>
+      {/* Interior warm glow visible through glass */}
+      <mesh position={[0, 2.5, 5.9]}>
+        <planeGeometry args={[24, 4.2]} />
+        <meshStandardMaterial color="#0A0A0A" emissive="#FF9944" emissiveIntensity={0.2} />
+      </mesh>
+
+      {/* ━━━ STRUCTURAL I-BEAMS — exposed steel ━━━ */}
+      {Array.from({ length: 5 }, (_, i) => {
+        const x = -12 + i * 6
+        return (
+          <group key={`beam-${i}`}>
+            {/* Web */}
+            <mesh position={[x, 5.35, 0]} castShadow>
+              <boxGeometry args={[0.06, 0.3, 13]} />
+              <meshStandardMaterial color="#333" roughness={0.35} metalness={0.9} />
+            </mesh>
+            {/* Top flange */}
+            <mesh position={[x, 5.5, 0]}>
+              <boxGeometry args={[0.3, 0.04, 13]} />
+              <meshStandardMaterial color="#333" roughness={0.35} metalness={0.9} />
+            </mesh>
+            {/* Bottom flange */}
+            <mesh position={[x, 5.2, 0]}>
+              <boxGeometry args={[0.3, 0.04, 13]} />
+              <meshStandardMaterial color="#333" roughness={0.35} metalness={0.9} />
+            </mesh>
+          </group>
+        )
+      })}
+
+      {/* ━━━ GRAPE RECEPTION — cantilevered canopy ━━━ */}
+      <group position={[15, 0, 3]}>
+        {/* Loading dock platform */}
+        <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+          <boxGeometry args={[6, 1, 8]} />
+          <meshStandardMaterial color="#8A8278" roughness={0.85} metalness={0.03} />
         </mesh>
-        {Array.from({ length: 6 }, (_, i) => (
-          <mesh key={`ext-tile-${i}`} position={[0, 0.08, -1.8 + i * 0.65]} castShadow>
-            <boxGeometry args={[5.8, 0.05, 0.35]} />
-            <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
+        {/* Steel canopy columns */}
+        {[[-2.5, 3], [2.5, 3], [-2.5, -3], [2.5, -3]].map(([cx, cz], i) => (
+          <mesh key={`col-${i}`} position={[cx, 2.8, cz]} castShadow>
+            <boxGeometry args={[0.15, 4.6, 0.15]} />
+            <meshStandardMaterial color="#2A2A2A" roughness={0.3} metalness={0.88} />
           </mesh>
         ))}
+        {/* Canopy roof — steel plate */}
+        <mesh position={[0, 5.15, 0]} castShadow receiveShadow>
+          <boxGeometry args={[7, 0.08, 9]} />
+          <meshStandardMaterial color="#3A3A3A" roughness={0.4} metalness={0.85} />
+        </mesh>
+        {/* Canopy edge beam */}
+        <mesh position={[0, 5.0, 4.5]} castShadow>
+          <boxGeometry args={[7, 0.25, 0.1]} />
+          <meshStandardMaterial color="#2A2A2A" roughness={0.35} metalness={0.9} />
+        </mesh>
+        {/* Ramp down to ground */}
+        <mesh position={[0, 0.15, 5.5]} rotation={[0.12, 0, 0]} receiveShadow>
+          <boxGeometry args={[5, 0.12, 3.5]} />
+          <meshStandardMaterial color="#7A7268" roughness={0.9} metalness={0.02} />
+        </mesh>
       </group>
 
-      {/* Loading dock — RoundedBox */}
-      <RoundedBox args={[2, 0.8, 3]} radius={0.02} smoothness={4} position={[8.5, 0.4, 2]} castShadow>
-        <meshStandardMaterial color="#555" metalness={0.6} roughness={0.4} />
-      </RoundedBox>
+      {/* ━━━ INDUSTRIAL CHIMNEY — ventilation stack ━━━ */}
+      <mesh position={[-6, 5.5, -3]} castShadow>
+        <cylinderGeometry args={[0.25, 0.35, 5, 12]} />
+        <meshStandardMaterial color="#444" roughness={0.4} metalness={0.75} />
+      </mesh>
+      <mesh position={[-6, 8.1, -3]}>
+        <cylinderGeometry args={[0.35, 0.25, 0.15, 12]} />
+        <meshStandardMaterial color="#555" roughness={0.35} metalness={0.8} />
+      </mesh>
 
-      {/* Chimney — RoundedBox for organic stone look */}
-      <RoundedBox args={[0.6, 2.5, 0.6]} radius={0.03} smoothness={4} position={[3, 7.5, -1]} castShadow>
-        <meshStandardMaterial color="#6A5545" roughness={0.88} envMapIntensity={0.5} />
-      </RoundedBox>
-      <RoundedBox args={[0.8, 0.15, 0.8]} radius={0.02} smoothness={4} position={[3, 8.8, -1]} castShadow>
-        <meshStandardMaterial color="#7A6555" roughness={0.85} />
-      </RoundedBox>
+      {/* ━━━ SEMI-UNDERGROUND: terrain ramp cut ━━━ */}
+      <mesh position={[0, -0.1, 8]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[30, 5]} />
+        <meshStandardMaterial color="#6B5D4F" roughness={0.95} metalness={0} />
+      </mesh>
+      {/* Access ramp — descending into building */}
+      <mesh position={[5, -0.3, 9.5]} rotation={[-0.08, 0, 0]} receiveShadow castShadow>
+        <boxGeometry args={[4, 0.15, 6]} />
+        <meshStandardMaterial color="#7A7268" roughness={0.92} metalness={0.02} />
+      </mesh>
+      {/* Ramp retaining walls */}
+      <mesh position={[3, 0.3, 9.5]} castShadow>
+        <boxGeometry args={[0.2, 1.2, 6]} />
+        <meshStandardMaterial color="#8A8278" roughness={0.85} />
+      </mesh>
+      <mesh position={[7, 0.3, 9.5]} castShadow>
+        <boxGeometry args={[0.2, 1.2, 6]} />
+        <meshStandardMaterial color="#8A8278" roughness={0.85} />
+      </mesh>
+
+      {/* ━━━ DRY STONE PERIMETER WALL ━━━ */}
+      {/* Front wall connecting to vineyard rows */}
+      <mesh position={[0, 0.4, 14]} castShadow receiveShadow>
+        <boxGeometry args={[50, 0.9, 0.5, 40, 8, 4]} />
+        <meshStandardMaterial
+          map={useMemo(() => createStoneTexture(256, 256), [])}
+          normalMap={stoneNormal}
+          normalScale={new THREE.Vector2(2.0, 2.0)}
+          roughness={0.95}
+          metalness={0.01}
+        />
+      </mesh>
+      {/* Side wall — east */}
+      <mesh position={[25, 0.35, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.5, 0.8, 28, 4, 8, 20]} />
+        <meshStandardMaterial
+          map={useMemo(() => createStoneTexture(256, 256), [])}
+          normalMap={stoneNormal}
+          normalScale={new THREE.Vector2(2.0, 2.0)}
+          roughness={0.95}
+          metalness={0.01}
+        />
+      </mesh>
+      {/* Side wall — west */}
+      <mesh position={[-25, 0.35, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.5, 0.8, 28, 4, 8, 20]} />
+        <meshStandardMaterial
+          map={useMemo(() => createStoneTexture(256, 256), [])}
+          normalMap={stoneNormal}
+          normalScale={new THREE.Vector2(2.0, 2.0)}
+          roughness={0.95}
+          metalness={0.01}
+        />
+      </mesh>
+
+      {/* ━━━ SIGNAGE — Bodega name on concrete facade ━━━ */}
+      <Html position={[0, 4, -6.05]} transform scale={0.3}>
+        <div style={{ color: '#D4A843', fontFamily: 'monospace', fontSize: '14px', fontWeight: 700, letterSpacing: '8px', textTransform: 'uppercase', whiteSpace: 'nowrap', userSelect: 'none' }}>
+          Bodega del Duero
+        </div>
+      </Html>
+
     </group>
   )
 }
