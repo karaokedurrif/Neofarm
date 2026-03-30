@@ -100,24 +100,24 @@ export default function SettingsPage() {
               <button
                 key={t.key}
                 onClick={() => handleTheme(t.key)}
-                className={`relative bg-[#1A1A1A] border rounded-xl p-5 text-left transition-all duration-200 ${
-                  active ? 'border-white/40 ring-1 ring-white/20' : 'border-[#333] hover:border-[#555]'
-                }`}
+                className="relative card p-5 text-left"
+                style={{ borderColor: active ? 'rgba(255,255,255,0.4)' : undefined, boxShadow: active ? '0 0 0 1px rgba(255,255,255,0.2)' : undefined }}
               >
                 {active && (
-                  <span className="absolute top-3 right-3 text-[10px] text-[#9CA3AF] flex items-center gap-1">
+                  <span className="absolute top-3 right-3 text-[10px] flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                     <Check className="w-3 h-3" /> Activo
                   </span>
                 )}
                 <div
-                  className="w-6 h-6 rounded-full mb-3 ring-2 ring-offset-2 ring-offset-[#1A1A1A]"
+                  className="w-6 h-6 rounded-full mb-3 ring-2 ring-offset-2"
                   style={{
                     backgroundColor: t.primary500,
                     ringColor: active ? t.primary500 : 'transparent',
-                  }}
+                    '--tw-ring-offset-color': 'var(--surface)',
+                  } as React.CSSProperties}
                 />
                 <p className="font-semibold text-sm mb-1">{t.name}</p>
-                <p className="text-xs text-[#9CA3AF] font-mono">{t.primary500}</p>
+                <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{t.primary500}</p>
 
                 {/* Palette preview */}
                 <div className="flex gap-1 mt-3">
@@ -136,12 +136,12 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold tracking-tight">Otros ajustes</h2>
         <div className="space-y-3">
           {/* Compact mode */}
-          <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#333] rounded-xl px-5 py-4">
+          <div className="card px-5 py-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="flex items-center gap-3">
-              <Minimize2 className="w-4 h-4 text-[#9CA3AF]" />
+              <Minimize2 className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               <div>
                 <p className="text-sm font-medium">Modo compacto</p>
-                <p className="text-xs text-[#9CA3AF]">Reduce padding y font-size en cards</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Reduce padding y font-size en cards</p>
               </div>
             </div>
             <button
@@ -157,12 +157,12 @@ export default function SettingsPage() {
           </div>
 
           {/* Sidebar collapsed */}
-          <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#333] rounded-xl px-5 py-4">
+          <div className="card px-5 py-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="flex items-center gap-3">
-              <PanelLeftClose className="w-4 h-4 text-[#9CA3AF]" />
+              <PanelLeftClose className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               <div>
                 <p className="text-sm font-medium">Sidebar colapsado por defecto</p>
-                <p className="text-xs text-[#9CA3AF]">Solo muestra iconos en la barra lateral</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Solo muestra iconos en la barra lateral</p>
               </div>
             </div>
             <button
@@ -178,12 +178,12 @@ export default function SettingsPage() {
           </div>
 
           {/* Language */}
-          <div className="flex items-center justify-between bg-[#1A1A1A] border border-[#333] rounded-xl px-5 py-4">
+          <div className="card px-5 py-4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="flex items-center gap-3">
-              <Globe className="w-4 h-4 text-[#9CA3AF]" />
+              <Globe className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
               <div>
                 <p className="text-sm font-medium">Idioma</p>
-                <p className="text-xs text-[#9CA3AF]">Selecciona el idioma de la interfaz</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Selecciona el idioma de la interfaz</p>
               </div>
             </div>
             <select
@@ -192,7 +192,8 @@ export default function SettingsPage() {
                 setLang(e.target.value)
                 localStorage.setItem('bd-lang', e.target.value)
               }}
-              className="bg-[#262626] border border-[#333] rounded-lg px-3 py-1.5 text-sm text-[#E5E5E5] outline-none"
+              className="rounded-lg px-3 py-1.5 text-sm outline-none"
+              style={{ background: 'var(--surface-active)', border: '1px solid var(--border)', color: 'var(--text)' }}
             >
               <option value="es">Español</option>
               <option value="en">English</option>

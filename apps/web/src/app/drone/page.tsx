@@ -9,10 +9,10 @@ const flights = [
 ]
 
 const ndviZones = [
-  { zone: 'NE', ndvi: 0.82, trend: '↑', health: 'Excelente', color: '#22C55E' },
+  { zone: 'NE', ndvi: 0.82, trend: '↑', health: 'Excelente', color: 'var(--success)' },
   { zone: 'NO', ndvi: 0.71, trend: '→', health: 'Bueno', color: '#4ADE80' },
-  { zone: 'SE', ndvi: 0.55, trend: '↓', health: 'Estrés moderado', color: '#FBBF24' },
-  { zone: 'SO', ndvi: 0.48, trend: '↓', health: 'Estrés alto', color: '#EF4444' },
+  { zone: 'SE', ndvi: 0.55, trend: '↓', health: 'Estrés moderado', color: 'var(--warning)' },
+  { zone: 'SO', ndvi: 0.48, trend: '↓', health: 'Estrés alto', color: 'var(--danger)' },
   { zone: 'Centro', ndvi: 0.76, trend: '↑', health: 'Bueno', color: '#4ADE80' },
 ]
 
@@ -20,18 +20,18 @@ export default function DronePage() {
   return (
     <PageShell title="Dron / NDVI" subtitle="DJI Mavic 3M · Sensor multiespectral">
       <div className="grid grid-cols-5 gap-3">
-        {ndviZones.map(z => (
-          <div key={z.zone} className="bg-[#1A1A1A] border border-[#333] rounded-xl p-4 text-center">
-            <p className="text-xs text-[#9CA3AF] mb-1">Zona {z.zone}</p>
+        {ndviZones.map((z, i) => (
+          <div key={z.zone} className="card p-4 text-center animate-in" style={{ animationDelay: `${i * 60}ms` }}>
+            <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Zona {z.zone}</p>
             <p className="text-2xl font-bold" style={{ color: z.color }}>{z.ndvi}</p>
             <p className="text-xs mt-1">{z.trend} {z.health}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-[#1A1A1A] border border-[#333] rounded-xl p-4">
+      <div className="card p-4">
         <h3 className="font-medium mb-4">Mapa NDVI — Último vuelo (25/03/2026)</h3>
-        <div className="relative w-full h-64 bg-[#262626] rounded-lg overflow-hidden">
+        <div className="relative w-full h-64 rounded-lg overflow-hidden" style={{ background: 'var(--surface-active)' }}>
           <svg viewBox="0 0 500 250" className="w-full h-full">
             <rect x="0" y="0" width="250" height="125" fill="#22C55E" opacity="0.7" />
             <rect x="250" y="0" width="250" height="125" fill="#4ADE80" opacity="0.6" />
@@ -47,31 +47,31 @@ export default function DronePage() {
         </div>
       </div>
 
-      <div className="bg-[#1A1A1A] border border-[#333] rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#333]"><h3 className="font-medium">Historial de vuelos</h3></div>
+      <div className="card-flat overflow-hidden">
+        <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}><h3 className="font-medium">Historial de vuelos</h3></div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-[#9CA3AF] text-xs border-b border-[#333]">
-              <th className="px-4 py-2 text-left">ID</th>
-              <th className="px-4 py-2 text-left">Fecha</th>
-              <th className="px-4 py-2 text-left">Tipo</th>
-              <th className="px-4 py-2 text-left">Área</th>
-              <th className="px-4 py-2 text-left">Altitud</th>
-              <th className="px-4 py-2 text-left">Imágenes</th>
-              <th className="px-4 py-2 text-left">Estado</th>
+            <tr className="text-xs font-medium" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+              <th className="px-4 py-2.5 text-left">ID</th>
+              <th className="px-4 py-2.5 text-left">Fecha</th>
+              <th className="px-4 py-2.5 text-left">Tipo</th>
+              <th className="px-4 py-2.5 text-left">Área</th>
+              <th className="px-4 py-2.5 text-left">Altitud</th>
+              <th className="px-4 py-2.5 text-left">Imágenes</th>
+              <th className="px-4 py-2.5 text-left">Estado</th>
             </tr>
           </thead>
           <tbody>
             {flights.map(f => (
-              <tr key={f.id} className="border-b border-[#222] hover:bg-[#262626]">
-                <td className="px-4 py-2 font-mono">{f.id}</td>
-                <td className="px-4 py-2">{f.date}</td>
-                <td className="px-4 py-2">{f.type}</td>
-                <td className="px-4 py-2">{f.area}</td>
-                <td className="px-4 py-2">{f.altitude}</td>
-                <td className="px-4 py-2">{f.images || '—'}</td>
-                <td className="px-4 py-2">
-                  <span className={f.status === 'Procesado' ? 'text-[#4ADE80]' : 'text-[#3B82F6]'}>{f.status}</span>
+              <tr key={f.id} className="table-row" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <td className="px-4 py-2.5 font-mono">{f.id}</td>
+                <td className="px-4 py-2.5">{f.date}</td>
+                <td className="px-4 py-2.5">{f.type}</td>
+                <td className="px-4 py-2.5">{f.area}</td>
+                <td className="px-4 py-2.5">{f.altitude}</td>
+                <td className="px-4 py-2.5">{f.images || '—'}</td>
+                <td className="px-4 py-2.5">
+                  <span style={{ color: f.status === 'Procesado' ? 'var(--success)' : 'var(--info)' }}>{f.status}</span>
                 </td>
               </tr>
             ))}

@@ -1,7 +1,7 @@
 'use client'
 import { Canvas } from '@react-three/fiber'
 import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { EffectComposer, Bloom, SSAO, Vignette } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { Suspense } from 'react'
 import * as THREE from 'three'
 
@@ -41,16 +41,11 @@ function SceneLighting() {
 
 function PostProcessing() {
   return (
-    <EffectComposer normalPass>
+    <EffectComposer>
       <Bloom
         luminanceThreshold={1}
         luminanceSmoothing={0.9}
         intensity={0.6}
-      />
-      <SSAO
-        radius={0.15}
-        intensity={20}
-        luminanceInfluence={0.5}
       />
       <Vignette eskil={false} offset={0.3} darkness={0.55} />
     </EffectComposer>
