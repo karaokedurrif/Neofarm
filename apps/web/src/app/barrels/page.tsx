@@ -1,5 +1,14 @@
 'use client'
+import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import PageShell from '@/components/shared/PageShell'
+
+const WineryScene = dynamic<{
+  children: React.ReactNode
+  cameraPosition?: [number, number, number]
+  cameraTarget?: [number, number, number]
+}>(() => import('@/components/digital-twin/WineryScene'), { ssr: false })
+const BarrelRoomScene = dynamic(() => import('@/components/digital-twin/BarrelRoomScene'), { ssr: false })
 
 const barrels = [
   ...Array.from({ length: 8 }, (_, i) => ({ id: `A${i+1}`, row: 'A', oak: 'Roble Francés', cooper: 'Allier', age: 1 + (i % 3), usage: ['Crianza','Reserva','Gran Reserva'][i % 3], wine: 'Tempranillo 2024', racking: i === 2 ? 'Vencido' : 'OK', nextRacking: i === 2 ? '¡Ahora!' : `${10+i*3} días` })),
@@ -15,6 +24,25 @@ const usageStyles: Record<string, { color: string; bg: string }> = {
 export default function BarrelsPage() {
   return (
     <PageShell title="Barricas" subtitle="14 barricas activas · 2 filas">
+      {/* ── 3D Barrel Room Scene ── */}
+      <div className="relative h-[420px] rounded-xl overflow-hidden border animate-in" style={{ borderColor: 'var(--border)', background: '#0F0F0F' }}>
+        <Suspense fallback={
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Cargando 3D…</p>
+            </div>
+          </div>
+        }>
+          <WineryScene cameraPosition={[8, 6, 10]} cameraTarget={[0, 1, 0]}>
+            <BarrelRoomScene />
+          </WineryScene>
+        </Suspense>
+        <div className="absolute top-3 left-3 bg-[#0F0F0F]/80 border border-[#333] rounded-lg px-3 py-1.5 backdrop-blur-md z-10">
+          <span className="text-xs font-bold tracking-wider uppercase" style={{ color: 'var(--accent)' }}>Gemelo Digital · Barricas</span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-4 gap-3 text-sm">
         {[
           { value: '14', label: 'Total activas', color: 'var(--accent)' },
