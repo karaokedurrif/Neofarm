@@ -1,7 +1,7 @@
 'use client'
 import React, { useRef, useState, useMemo, useEffect, memo, useCallback } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html, Sky, Line } from '@react-three/drei'
+import { Html, Line, RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 
 /* ═══════════════════════════════════════════════════════
@@ -284,6 +284,7 @@ function VineTrunks() {
   useEffect(() => {
     const mesh = meshRef.current
     if (!mesh) return
+    const tmpColor = new THREE.Color()
     let idx = 0
     for (let row = 0; row < ROWS; row++) {
       for (let vine = 0; vine < VINES_PER_ROW; vine++) {
@@ -302,16 +303,25 @@ function VineTrunks() {
         dummy.scale.set(1, 0.7 + sr(row * 700 + vine) * 0.6, 1)
         dummy.updateMatrix()
         mesh.setMatrixAt(idx, dummy.matrix)
+        // Per-instance color variation: warm-to-cool brown
+        const t = sr(row * 300 + vine * 7)
+        tmpColor.setRGB(
+          0.28 + t * 0.12,   // R: 0.28 – 0.40
+          0.18 + t * 0.08,   // G: 0.18 – 0.26
+          0.10 + t * 0.06    // B: 0.10 – 0.16
+        )
+        mesh.setColorAt(idx, tmpColor)
         idx++
       }
     }
     mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }, [dummy])
 
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, TOTAL_VINES]} castShadow>
       <cylinderGeometry args={[0.025, 0.035, 0.55, 6]} />
-      <meshStandardMaterial color="#5C4033" roughness={1.0} metalness={0} />
+      <meshStandardMaterial vertexColors roughness={1.0} metalness={0} />
     </instancedMesh>
   )
 }
@@ -681,19 +691,19 @@ function WineryBuilding() {
 
   return (
     <group position={[0, 0, -22]}>
-      {/* Main building body — stone textured with displacement relief */}
-      <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[16, 5.5, 9, 32, 24, 16]} />
+      {/* Main building body — RoundedBox for beveled edges */}
+      <RoundedBox args={[16, 5.5, 9]} radius={0.04} smoothness={4} position={[0, 2.5, 0]} castShadow receiveShadow>
         <meshStandardMaterial
           map={stoneTex}
           normalMap={stoneNormalMap}
-          normalScale={new THREE.Vector2(1.2, 1.2)}
+          normalScale={new THREE.Vector2(1.5, 1.5)}
           displacementMap={stoneDispMap}
-          displacementScale={0.08}
-          roughness={0.8}
+          displacementScale={0.1}
+          roughness={0.85}
           metalness={0.02}
+          envMapIntensity={0.7}
         />
-      </mesh>
+      </RoundedBox>
 
       {/* Roof ridge beam */}
       <mesh position={[0, 6.2, 0]} castShadow>
@@ -757,11 +767,10 @@ function WineryBuilding() {
         <torusGeometry args={[1.5, 0.18, 8, 16, Math.PI]} />
         <meshStandardMaterial color="#7A6A55" roughness={0.85} metalness={0.1} />
       </mesh>
-      {/* Keystone */}
-      <mesh position={[0, 5.1, 4.53]} castShadow>
-        <boxGeometry args={[0.4, 0.5, 0.2]} />
-        <meshStandardMaterial color="#9A8A7A" roughness={0.85} />
-      </mesh>
+      {/* Keystone — RoundedBox */}
+      <RoundedBox args={[0.4, 0.5, 0.2]} radius={0.02} smoothness={4} position={[0, 5.1, 4.53]} castShadow>
+        <meshStandardMaterial color="#9A8A7A" roughness={0.82} />
+      </RoundedBox>
 
       {/* Windows with warm glow + stone frames */}
       {([-5, -2.5, 2.5, 5] as number[]).map((x) => (
@@ -783,19 +792,19 @@ function WineryBuilding() {
         </group>
       ))}
 
-      {/* Side extension — stone textured with relief */}
-      <mesh position={[-10, 1.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[5, 3.5, 7, 12, 8, 12]} />
+      {/* Side extension — RoundedBox with stone texture */}
+      <RoundedBox args={[5, 3.5, 7]} radius={0.03} smoothness={4} position={[-10, 1.5, 0]} castShadow receiveShadow>
         <meshStandardMaterial
           map={stoneTex}
           normalMap={stoneNormalMap}
-          normalScale={new THREE.Vector2(1.0, 1.0)}
+          normalScale={new THREE.Vector2(1.2, 1.2)}
           displacementMap={stoneDispMap}
-          displacementScale={0.05}
-          roughness={0.8}
+          displacementScale={0.06}
+          roughness={0.85}
           metalness={0.02}
+          envMapIntensity={0.7}
         />
-      </mesh>
+      </RoundedBox>
       {/* Extension roof */}
       <group position={[-10, 3.5, 0]} rotation={[0.2, 0, 0]}>
         <mesh castShadow>
@@ -810,21 +819,18 @@ function WineryBuilding() {
         ))}
       </group>
 
-      {/* Loading dock */}
-      <mesh position={[8.5, 0.4, 2]} castShadow>
-        <boxGeometry args={[2, 0.8, 3]} />
+      {/* Loading dock — RoundedBox */}
+      <RoundedBox args={[2, 0.8, 3]} radius={0.02} smoothness={4} position={[8.5, 0.4, 2]} castShadow>
         <meshStandardMaterial color="#555" metalness={0.6} roughness={0.4} />
-      </mesh>
+      </RoundedBox>
 
-      {/* Chimney */}
-      <mesh position={[3, 7.5, -1]} castShadow>
-        <boxGeometry args={[0.6, 2.5, 0.6]} />
-        <meshStandardMaterial color="#6A5545" roughness={0.92} />
-      </mesh>
-      <mesh position={[3, 8.8, -1]} castShadow>
-        <boxGeometry args={[0.8, 0.15, 0.8]} />
-        <meshStandardMaterial color="#7A6555" roughness={0.9} />
-      </mesh>
+      {/* Chimney — RoundedBox for organic stone look */}
+      <RoundedBox args={[0.6, 2.5, 0.6]} radius={0.03} smoothness={4} position={[3, 7.5, -1]} castShadow>
+        <meshStandardMaterial color="#6A5545" roughness={0.88} envMapIntensity={0.5} />
+      </RoundedBox>
+      <RoundedBox args={[0.8, 0.15, 0.8]} radius={0.02} smoothness={4} position={[3, 8.8, -1]} castShadow>
+        <meshStandardMaterial color="#7A6555" roughness={0.85} />
+      </RoundedBox>
     </group>
   )
 }
@@ -853,10 +859,6 @@ function AccessPath() {
   )
 }
 
-function GoldenHourSky() {
-  return <Sky distance={450000} sunPosition={[100, 10, 100]} turbidity={10} rayleigh={2} mieCoefficient={0.005} mieDirectionalG={0.85} />
-}
-
 function SceneAnimationDriver() {
   useFrame(({ invalidate }) => { invalidate() })
   return null
@@ -876,7 +878,6 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
   return (
     <group>
       <SceneAnimationDriver />
-      <GoldenHourSky />
       <Terrain />
       <AccessPath />
       <TrellisSystem />

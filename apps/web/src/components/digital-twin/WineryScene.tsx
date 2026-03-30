@@ -1,6 +1,6 @@
 'use client'
 import { Canvas } from '@react-three/fiber'
-import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { Environment, ContactShadows, OrbitControls, PerspectiveCamera, Sky } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing'
 import { Suspense } from 'react'
 import * as THREE from 'three'
@@ -11,109 +11,93 @@ interface WinerySceneProps {
   cameraTarget?: [number, number, number]
 }
 
+// 1. ILUMINACIÓN: Cambiamos el naranja por luz solar neutra y potente
 function SceneLighting() {
   return (
     <>
-      {/* Primary sun — warm golden-hour directional */}
       <directionalLight
-        position={[-20, 15, -10]}
-        intensity={2.2}
-        color="#FF9944"
+        position={[20, 30, 10]}
+        intensity={4.0}
+        color="#ffffff" 
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-far={80}
-        shadow-camera-left={-30}
-        shadow-camera-right={30}
-        shadow-camera-top={30}
-        shadow-camera-bottom={-30}
-        shadow-bias={-0.0005}
+        shadow-mapSize={[2048, 2048]} // Sombras más nítidas, menos "pixeladas"
+        shadow-camera-far={100}
+        shadow-camera-left={-40}
+        shadow-camera-right={40}
+        shadow-camera-top={40}
+        shadow-camera-bottom={-40}
+        shadow-bias={-0.0001}
       />
-      {/* Very subtle hemisphere — Sky + Environment handle the rest */}
-      <hemisphereLight args={['#FFD4A0', '#3D2B1F', 0.06]} />
+      {/* Luz ambiental azulada (cielo) y terrosa (suelo) */}
+      <hemisphereLight args={['#87CEEB', '#443322', 1.2]} />
     </>
   )
 }
 
+// 2. POST-PROCESADO: Ajustamos la Oclusión Ambiental para detalles en paredes
 function PostProcessing() {
   return (
-    <EffectComposer multisampling={0}>
-      {/* SSAO — ambient occlusion in cracks, under vines, building recesses */}
-      <N8AO aoRadius={2} intensity={1.5} distanceFalloff={0.5} />
-      {/* Soft bloom — sensors glow, window emission */}
-      <Bloom
-        luminanceThreshold={1.2}
-        luminanceSmoothing={0.9}
-        intensity={0.3}
+    <EffectComposer multisampling={4}>
+      <N8AO
+        aoRadius={0.5}
+        intensity={2.5}
+        distanceFalloff={0.8}
       />
-      <Vignette eskil={false} offset={0.3} darkness={0.55} />
+      <Bloom
+        luminanceThreshold={1.5}
+        intensity={0.2}
+      />
+      <Vignette eskil={false} offset={0.2} darkness={0.4} />
     </EffectComposer>
-  )
-}
-
-function LoadingFallback() {
-  return (
-    <mesh>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#333" wireframe />
-    </mesh>
   )
 }
 
 export default function WineryScene({
   children,
-  cameraPosition = [20, 15, 25],
+  cameraPosition = [25, 20, 30],
   cameraTarget = [0, 0, 0],
 }: WinerySceneProps) {
   return (
     <Canvas
       shadows
-      frameloop="demand"
-      dpr={[1, 1.5]}
+      dpr={[1, 2]} // Mejor resolución en pantallas Retina/4K
       gl={{
         antialias: true,
-        alpha: false,
-        powerPreference: 'high-performance',
+        stencil: false,
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.2,
+        toneMappingExposure: 1.0,
       }}
-      style={{ background: '#0F0F0F' }}
     >
-      <fog attach="fog" args={['#17171b', 30, 90]} />
-      <color attach="background" args={['#17171b']} />
+      {/* 3. FONDO: Azul claro de día en lugar de negro */}
+      <color attach="background" args={['#dae4ee']} />
+      <fog attach="fog" args={['#dae4ee', 50, 150]} />
+      
+      {/* Añadimos un cielo físico para reflejos naturales */}
+      <Sky sunPosition={[20, 30, 10]} inclination={0.5} azimuth={0.25} />
 
-      <PerspectiveCamera makeDefault position={cameraPosition} fov={45} near={0.1} far={200} />
+      <PerspectiveCamera makeDefault position={cameraPosition} fov={40} />
       <OrbitControls
         target={cameraTarget}
-        enablePan
-        enableZoom
-        enableRotate
-        minPolarAngle={Math.PI / 8}
-        maxPolarAngle={Math.PI / 2.4}
-        minDistance={5}
-        maxDistance={60}
-        dampingFactor={0.05}
+        maxPolarAngle={Math.PI / 2.1} // Evita ver debajo del suelo
         enableDamping
       />
 
       <SceneLighting />
 
-      {/* Environment sunset HDRI for natural reflections — replaces generic ambientLight */}
-      <Environment preset="sunset" environmentIntensity={0.8} />
+      {/* Preset 'apartment' o 'park' da una luz más blanca y realista que 'sunset' */}
+      <Environment preset="apartment" environmentIntensity={0.6} />
 
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={null}>
         {children}
       </Suspense>
 
       <ContactShadows
-        position={[0, 0, 0]}
-        opacity={0.4}
-        scale={50}
-        blur={2}
-        far={4.5}
-        frames={1}
-        resolution={512}
-        color="#1A0F05"
+        position={[0, -0.01, 0]}
+        opacity={0.6}
+        scale={60}
+        blur={1.5}
+        far={10}
+        color="#221100"
       />
 
       <PostProcessing />
