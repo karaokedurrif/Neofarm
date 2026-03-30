@@ -1,7 +1,7 @@
 'use client'
 import React, { useRef, useState, useMemo, useEffect, memo, useCallback } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html, Line, RoundedBox } from '@react-three/drei'
+import { Html, Line, RoundedBox, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 
 /* ═══════════════════════════════════════════════════════
@@ -177,7 +177,7 @@ function createLeafTexture(w = 64, h = 64): THREE.DataTexture {
    TERRAIN — displaced with vertex colors + soil texture
    ═══════════════════════════════════════════════════════ */
 
-/** Procedural soil albedo — dirt + moisture stains + gravel speckles */
+/** Procedural soil albedo — dry dirt, sand, grass patches + gravel */
 function createSoilAlbedoTexture(w = 256, h = 256): THREE.DataTexture {
   const data = new Uint8Array(w * h * 4)
   for (let y = 0; y < h; y++) {
@@ -189,12 +189,27 @@ function createSoilAlbedoTexture(w = 256, h = 256): THREE.DataTexture {
       const grain = fbm(x * 0.2, y * 0.2, 3)
       // Gravel speckles
       const speckle = hash(x * 3, y * 3) > 0.92 ? 0.15 : 0
+      // Sandy patches — warm yellow-beige
+      const sandNoise = fbm(x * 0.04 + 30, y * 0.04 + 60, 3)
+      const sandMask = sandNoise > 0.6 ? (sandNoise - 0.6) * 3.0 : 0
+      // Grass tufts — rich green
+      const grassNoise = fbm(x * 0.05 + 90, y * 0.05 + 120, 4)
+      const grassMask = grassNoise > 0.62 ? (grassNoise - 0.62) * 4.0 : 0
       // Base earth - modulated by moisture
       const wetFactor = moisture < 0.4 ? 1.0 - (0.4 - moisture) * 0.8 : 1.0
       const base = (0.55 + grain * 0.2 - speckle) * wetFactor
-      data[i]     = Math.min(255, Math.max(0, base * 0.85 * 255))  // R - warm
-      data[i + 1] = Math.min(255, Math.max(0, base * 0.75 * 255))  // G
-      data[i + 2] = Math.min(255, Math.max(0, base * 0.58 * 255))  // B - earthy
+      let r = base * 0.85, g = base * 0.75, b = base * 0.58
+      // Blend sand (warm beige)
+      r += sandMask * 0.15
+      g += sandMask * 0.12
+      b += sandMask * 0.04
+      // Blend grass (olive green)
+      r -= grassMask * 0.12
+      g += grassMask * 0.1
+      b -= grassMask * 0.06
+      data[i]     = Math.min(255, Math.max(0, r * 255))
+      data[i + 1] = Math.min(255, Math.max(0, g * 255))
+      data[i + 2] = Math.min(255, Math.max(0, b * 255))
       data[i + 3] = 255
     }
   }
@@ -205,10 +220,32 @@ function createSoilAlbedoTexture(w = 256, h = 256): THREE.DataTexture {
   return tex
 }
 
+/** Procedural displacement map — gentle rolling terrain */
+function createTerrainDisplacementMap(w = 256, h = 256): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      // Broad smooth hills
+      const hill = fbm(x * 0.015, y * 0.015, 3) * 0.7
+      // Finer undulations
+      const ripple = fbm(x * 0.06 + 20, y * 0.06 + 40, 2) * 0.3
+      const v = Math.min(255, Math.max(0, (hill + ripple) * 255))
+      data[i] = v; data[i + 1] = v; data[i + 2] = v; data[i + 3] = 255
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(1, 1)
+  tex.needsUpdate = true
+  return tex
+}
+
 function Terrain() {
   const ref = useRef<THREE.Mesh>(null)
   const normalMap = useMemo(() => createSoilNormalMap(), [])
   const soilAlbedo = useMemo(() => createSoilAlbedoTexture(), [])
+  const terrainDisp = useMemo(() => createTerrainDisplacementMap(), [])
   const bumpMap = useMemo(() => {
     const w = 256, h = 256
     const data = new Uint8Array(w * h * 4)
@@ -268,16 +305,18 @@ function Terrain() {
 
   return (
     <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
-      <planeGeometry args={[100, 100, 160, 160]} />
+      <planeGeometry args={[100, 100, 200, 200]} />
       <meshStandardMaterial
         vertexColors
         map={soilAlbedo}
         roughness={0.96}
         metalness={0}
         normalMap={normalMap}
-        normalScale={new THREE.Vector2(1.2, 1.2)}
+        normalScale={new THREE.Vector2(1.4, 1.4)}
         bumpMap={bumpMap}
-        bumpScale={0.2}
+        bumpScale={0.25}
+        displacementMap={terrainDisp}
+        displacementScale={0.4}
       />
     </mesh>
   )
@@ -575,7 +614,7 @@ function TrellisSystem() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   SENSOR NODE — bloom-emissive IoT sphere
+   SENSOR HUD — military-style leader lines + anchor
    ═══════════════════════════════════════════════════════ */
 function SensorNode({
   position, label, value, color = '#60A5FA',
@@ -588,6 +627,12 @@ function SensorNode({
   const onEnter = useCallback(() => setHovered(true), [])
   const onLeave = useCallback(() => setHovered(false), [])
 
+  // Leader line from sensor down to ground
+  const leaderPoints = useMemo((): [number, number, number][] => [
+    [position[0], position[1], position[2]],
+    [position[0], 0.05, position[2]],
+  ], [position])
+
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     if (ref.current) ref.current.position.y = position[1] + Math.sin(t * 2) * 0.05
@@ -599,19 +644,54 @@ function SensorNode({
 
   return (
     <group>
+      {/* Leader line — thin vertical to ground */}
+      <Line
+        points={leaderPoints}
+        color={color}
+        lineWidth={1.2}
+        transparent
+        opacity={0.45}
+        dashed
+        dashSize={0.15}
+        dashScale={1}
+        gapSize={0.08}
+      />
+      {/* Anchor circle at ground level */}
+      <mesh position={[position[0], 0.04, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.12, 0.16, 20]} />
+        <meshBasicMaterial color={color} transparent opacity={0.5} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Anchor dot */}
+      <mesh position={[position[0], 0.04, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.05, 12]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.0} toneMapped={false} />
+      </mesh>
+
+      {/* Sensor sphere */}
       <mesh ref={ref} position={position} onPointerEnter={onEnter} onPointerLeave={onLeave}>
         <sphereGeometry args={[0.12, 12, 12]} />
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={hovered ? 3.0 : 1.5} transparent opacity={0.95} toneMapped={false} />
       </mesh>
+      {/* Pulse ring around sensor */}
       <mesh ref={ringRef} position={position} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.18, 0.22, 16]} />
         <meshBasicMaterial color={color} transparent opacity={0.25} side={THREE.DoubleSide} />
       </mesh>
+
+      {/* HUD label — always visible, compact military style */}
+      <Html position={[position[0] + 0.3, position[1] + 0.15, position[2]]} center>
+        <div style={{ background: 'rgba(10,10,10,0.85)', border: `1px solid ${color}40`, borderRadius: '4px', padding: '3px 8px', fontSize: '9px', fontFamily: 'monospace', whiteSpace: 'nowrap', userSelect: 'none', color: '#E0E0E0', letterSpacing: '0.5px', backdropFilter: 'blur(4px)' }}>
+          <span style={{ color, fontWeight: 700, marginRight: '6px' }}>{label}</span>
+          <span>{value}</span>
+        </div>
+      </Html>
+
+      {/* Expanded HUD on hover */}
       {hovered && (
         <Html position={[position[0], position[1] + 0.7, position[2]]} center>
-          <div className="bg-[#1A1A1A]/95 border border-[#D4A843]/50 rounded-lg px-3 py-2 text-xs whitespace-nowrap backdrop-blur-md shadow-lg shadow-black/40">
-            <p className="text-[#D4A843] font-bold text-[11px] mb-1">{label}</p>
-            <p className="text-[#E5E5E5] font-mono">{value}</p>
+          <div className="bg-[#0A0A0A]/95 border rounded-lg px-4 py-2.5 text-xs whitespace-nowrap backdrop-blur-md shadow-lg shadow-black/50" style={{ borderColor: `${color}60` }}>
+            <p style={{ color, fontWeight: 700, fontSize: '11px', marginBottom: '4px', letterSpacing: '1px' }}>{label}</p>
+            <p className="text-[#E5E5E5] font-mono" style={{ fontSize: '12px' }}>{value}</p>
           </div>
         </Html>
       )}
@@ -853,10 +933,10 @@ function WineryBuilding() {
         />
       </RoundedBox>
 
-      {/* Flat roof slab — monolithic concrete with overhang */}
+      {/* Flat roof slab — monolithic concrete overhang, casts bold shadow */}
       <mesh position={[0, 5.12, 0.5]} castShadow receiveShadow>
         <boxGeometry args={[30, 0.25, 14]} />
-        <meshStandardMaterial color="#9A9488" roughness={0.85} metalness={0.03} envMapIntensity={1.0} />
+        <meshStandardMaterial color="#9A9488" roughness={0.7} metalness={0.03} envMapIntensity={1.0} />
       </mesh>
 
       {/* ━━━ CORTEN STEEL WING — barrel aging / admin ━━━ */}
@@ -946,22 +1026,22 @@ function WineryBuilding() {
           <boxGeometry args={[6, 1, 8]} />
           <meshStandardMaterial color="#8A8278" roughness={0.85} metalness={0.03} />
         </mesh>
-        {/* Steel canopy columns */}
+        {/* Steel canopy columns — concrete/stone roughness */}
         {[[-2.5, 3], [2.5, 3], [-2.5, -3], [2.5, -3]].map(([cx, cz], i) => (
           <mesh key={`col-${i}`} position={[cx, 2.8, cz]} castShadow>
             <boxGeometry args={[0.15, 4.6, 0.15]} />
-            <meshStandardMaterial color="#2A2A2A" roughness={0.3} metalness={0.88} />
+            <meshStandardMaterial color="#6A6358" roughness={0.7} metalness={0.08} />
           </mesh>
         ))}
-        {/* Canopy roof — steel plate */}
+        {/* Canopy roof — concrete overhang */}
         <mesh position={[0, 5.15, 0]} castShadow receiveShadow>
           <boxGeometry args={[7, 0.08, 9]} />
-          <meshStandardMaterial color="#3A3A3A" roughness={0.4} metalness={0.85} />
+          <meshStandardMaterial color="#8A8278" roughness={0.7} metalness={0.05} />
         </mesh>
         {/* Canopy edge beam */}
         <mesh position={[0, 5.0, 4.5]} castShadow>
           <boxGeometry args={[7, 0.25, 0.1]} />
-          <meshStandardMaterial color="#2A2A2A" roughness={0.35} metalness={0.9} />
+          <meshStandardMaterial color="#5A5550" roughness={0.7} metalness={0.08} />
         </mesh>
         {/* Ramp down to ground */}
         <mesh position={[0, 0.15, 5.5]} rotation={[0.12, 0, 0]} receiveShadow>
@@ -1105,6 +1185,25 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
 
       <DroneModel />
       <WineryBuilding />
+
+      {/* ContactShadows under building */}
+      <ContactShadows
+        position={[0, -0.02, -22]}
+        opacity={0.55}
+        scale={40}
+        blur={2.5}
+        far={8}
+        color="#1A1000"
+      />
+      {/* ContactShadows under vine rows */}
+      <ContactShadows
+        position={[0, -0.02, 0]}
+        opacity={0.35}
+        scale={60}
+        blur={2.5}
+        far={4}
+        color="#221100"
+      />
 
       {/* Corner vineyard posts */}
       {([[-24, 0.15, -12], [24, 0.15, -12], [-24, 0.15, 12], [24, 0.15, 12]] as [number, number, number][]).map((p, i) => (

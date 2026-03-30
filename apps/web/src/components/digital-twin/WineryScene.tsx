@@ -74,7 +74,7 @@ export default function WineryScene({
     >
       {/* 3. FONDO: Azul claro de día en lugar de negro */}
       <color attach="background" args={['#dae4ee']} />
-      <fog attach="fog" args={['#dae4ee', 50, 150]} />
+      <fog attach="fog" args={['#dae4ee', 35, 110]} />
       
       {/* Añadimos un cielo físico para reflejos naturales */}
       <Sky sunPosition={[-30, 20, 10]} inclination={0.5} azimuth={0.25} />
@@ -97,11 +97,11 @@ export default function WineryScene({
 
       <ContactShadows
         position={[0, -0.01, 0]}
-        opacity={0.6}
-        scale={60}
-        blur={1.5}
-        far={10}
-        color="#221100"
+        opacity={0.7}
+        scale={80}
+        blur={2.5}
+        far={12}
+        color="#1A0E00"
       />
 
       <PostProcessing />
