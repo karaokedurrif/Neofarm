@@ -20,8 +20,8 @@ function SceneLighting() {
         intensity={2}
         color="#FF9944"
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-far={80}
         shadow-camera-left={-30}
         shadow-camera-right={30}
@@ -108,10 +108,11 @@ export default function WineryScene({
 
       <ContactShadows
         position={[0, -0.01, 0]}
-        opacity={0.5}
+        opacity={0.4}
         scale={60}
-        blur={2.5}
-        far={25}
+        blur={2}
+        far={20}
+        frames={1}
         color="#000000"
       />
 

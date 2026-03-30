@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, Suspense } from 'react'
+import { useState, useCallback, Suspense, memo, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Leaf, Warehouse, Package, Maximize2, Minimize2, RotateCcw } from 'lucide-react'
 
@@ -144,6 +144,11 @@ function StatusBar() {
   )
 }
 
+const MemoVineyardHUD = memo(VineyardHUD)
+const MemoCellarHUD = memo(CellarHUD)
+const MemoBarrelHUD = memo(BarrelHUD)
+const MemoStatusBar = memo(StatusBar)
+
 export default function DigitalTwinManager() {
   const [activeView, setActiveView] = useState<ViewMode>('vineyard')
   const [fullscreen, setFullscreen] = useState(false)
@@ -209,12 +214,12 @@ export default function DigitalTwinManager() {
       </div>
 
       {/* Contextual HUD */}
-      {activeView === 'vineyard' && <VineyardHUD />}
-      {activeView === 'cellar' && <CellarHUD />}
-      {activeView === 'barrels' && <BarrelHUD />}
+      {activeView === 'vineyard' && <MemoVineyardHUD />}
+      {activeView === 'cellar' && <MemoCellarHUD />}
+      {activeView === 'barrels' && <MemoBarrelHUD />}
 
       {/* Status bar */}
-      <StatusBar />
+      <MemoStatusBar />
 
       {/* Title overlay */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">

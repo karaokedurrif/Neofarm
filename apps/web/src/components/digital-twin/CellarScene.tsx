@@ -48,7 +48,6 @@ function Tank({ data, onClick, selected }: { data: TankData; onClick: () => void
       const mat = liquidRef.current.material as THREE.MeshStandardMaterial
       mat.emissiveIntensity = 0.2 + Math.sin(state.clock.elapsedTime * 3) * 0.1
     }
-    state.invalidate()
   })
 
   return (

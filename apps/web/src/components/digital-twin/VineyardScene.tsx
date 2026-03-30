@@ -1,6 +1,6 @@
 'use client'
-import React, { useRef, useState, useMemo, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
+import React, { useRef, useState, useMemo, useEffect, memo, useCallback } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Sky, Line } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -90,9 +90,13 @@ function useVineInstancing(
   }, [meshRef, dummy])
 
   const tmpColor = useMemo(() => new THREE.Color(), [])
+  const frameCount = useRef(0)
   useFrame(({ clock, invalidate }) => {
     const mesh = meshRef.current
     if (!mesh) return
+    // Throttle color updates to every 3rd frame (~20 fps visual update)
+    frameCount.current++
+    if (frameCount.current % 3 !== 0) return
     const t = clock.elapsedTime
     let idx = 0
     for (let row = 0; row < ROWS; row++) {
@@ -162,7 +166,6 @@ function ProceduralVineRows({ ndviValues, humidityValues }: VineRowsProps) {
       args={[geometry, material, TOTAL_VINES]}
       castShadow
       receiveShadow
-      frustumCulled={false}
     />
   )
 }
@@ -238,8 +241,10 @@ function SensorNode({
   const ref = useRef<THREE.Mesh>(null)
   const ringRef = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
+  const onEnter = useCallback(() => setHovered(true), [])
+  const onLeave = useCallback(() => setHovered(false), [])
 
-  useFrame(({ clock, invalidate }) => {
+  useFrame(({ clock }) => {
     const t = clock.elapsedTime
     if (ref.current) ref.current.position.y = position[1] + Math.sin(t * 2) * 0.05
     if (ringRef.current) {
@@ -247,7 +252,7 @@ function SensorNode({
       const mat = ringRef.current.material as THREE.MeshBasicMaterial
       mat.opacity = 0.15 + Math.sin(t * 1.5) * 0.1
     }
-    invalidate()
+    // No invalidate() here — driven by scene-level animation loop
   })
 
   return (
@@ -255,10 +260,10 @@ function SensorNode({
       <mesh
         ref={ref}
         position={position}
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
+        onPointerEnter={onEnter}
+        onPointerLeave={onLeave}
       >
-        <sphereGeometry args={[0.12, 16, 16]} />
+        <sphereGeometry args={[0.12, 12, 12]} />
         <meshStandardMaterial
           color={color}
           emissive={color}
@@ -269,11 +274,11 @@ function SensorNode({
         />
       </mesh>
       <mesh ref={ringRef} position={position} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.18, 0.22, 32]} />
+        <ringGeometry args={[0.18, 0.22, 16]} />
         <meshBasicMaterial color={color} transparent opacity={0.25} side={THREE.DoubleSide} />
       </mesh>
       <mesh position={position} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.25, 0.35, 32]} />
+        <ringGeometry args={[0.25, 0.35, 16]} />
         <meshBasicMaterial color={color} transparent opacity={0.08} side={THREE.DoubleSide} />
       </mesh>
       {hovered && (
@@ -287,6 +292,7 @@ function SensorNode({
     </group>
   )
 }
+const MemoSensorNode = memo(SensorNode)
 
 /* ═══════════════════════════════════════════════════════
    DRONE MODEL
@@ -294,12 +300,11 @@ function SensorNode({
 function DroneModel() {
   const ref = useRef<THREE.Group>(null)
 
-  useFrame(({ clock, invalidate }) => {
+  useFrame(({ clock }) => {
     if (!ref.current) return
     const t = clock.elapsedTime * 0.3
     ref.current.position.set(Math.sin(t) * 10, 7 + Math.sin(t * 2) * 0.3, Math.cos(t) * 8)
     ref.current.rotation.y = t + Math.PI / 2
-    invalidate()
   })
 
   return (
@@ -372,6 +377,14 @@ function GoldenHourSky() {
 }
 
 /* ═══════════════════════════════════════════════════════
+   ANIMATION DRIVER — single invalidate source for the scene
+   ═══════════════════════════════════════════════════════ */
+function SceneAnimationDriver() {
+  useFrame(({ invalidate }) => { invalidate() })
+  return null
+}
+
+/* ═══════════════════════════════════════════════════════
    MAIN SCENE EXPORT
    ═══════════════════════════════════════════════════════ */
 interface VineyardSceneProps {
@@ -390,16 +403,17 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
 
   return (
     <group>
+      <SceneAnimationDriver />
       <GoldenHourSky />
       <Terrain />
       <TrellisSystem />
 
       <ProceduralVineRows ndviValues={ndviValues} humidityValues={humidityValues} />
 
-      <SensorNode position={[-12, 1.5, -4]} label="T/HR Campo" value="19°C | 68% HR" color="#60A5FA" />
-      <SensorNode position={[0, 1.2, 5]} label="Sonda Suelo 30cm" value="57% humedad | 16°C" color="#22C55E" />
-      <SensorNode position={[10, 1.5, -3]} label="Sensor Hoja" value="Potencial: -0.4 MPa" color="#FBBF24" />
-      <SensorNode position={[-8, 2, 8]} label="Estación Meteo" value="19°C | UV 4 | 12 km/h NW" color="#A78BFA" />
+      <MemoSensorNode position={[-12, 1.5, -4]} label="T/HR Campo" value="19°C | 68% HR" color="#60A5FA" />
+      <MemoSensorNode position={[0, 1.2, 5]} label="Sonda Suelo 30cm" value="57% humedad | 16°C" color="#22C55E" />
+      <MemoSensorNode position={[10, 1.5, -3]} label="Sensor Hoja" value="Potencial: -0.4 MPa" color="#FBBF24" />
+      <MemoSensorNode position={[-8, 2, 8]} label="Estación Meteo" value="19°C | UV 4 | 12 km/h NW" color="#A78BFA" />
 
       <DroneModel />
       <WineryBuilding />
