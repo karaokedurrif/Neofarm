@@ -1,6 +1,6 @@
 'use client'
 import React, { useRef, useState, useMemo, useEffect, memo, useCallback } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Sky, Line } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -11,11 +11,11 @@ const ROWS = 25
 const VINES_PER_ROW = 40
 const ROW_SPACING = 2.0
 const VINE_SPACING = 0.55
-const TOTAL_VINES = ROWS * VINES_PER_ROW   // 1000
+const TOTAL_VINES = ROWS * VINES_PER_ROW
 const POSTS_PER_ROW = 9
 const ROW_LENGTH = VINES_PER_ROW * VINE_SPACING
 const TOTAL_POSTS = ROWS * POSTS_PER_ROW
-const LEAF_INSTANCES = TOTAL_VINES * 3      // 3 leaves per vine = 3000
+const LEAF_INSTANCES = TOTAL_VINES * 3
 
 function sr(seed: number) {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
@@ -28,10 +28,134 @@ interface VineRowsProps {
 }
 
 /* ═══════════════════════════════════════════════════════
-   TERRAIN — 160×160 displaced multi-octave
+   PROCEDURAL TEXTURES — stone, soil normal, leaf alpha
+   ═══════════════════════════════════════════════════════ */
+
+/** Simple 2D hash for procedural noise */
+function hash(x: number, y: number) {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453
+  return n - Math.floor(n)
+}
+
+/** Value noise with bilinear interpolation */
+function valueNoise(px: number, py: number) {
+  const ix = Math.floor(px), iy = Math.floor(py)
+  const fx = px - ix, fy = py - iy
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy)
+  const a = hash(ix, iy), b = hash(ix + 1, iy)
+  const c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1)
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy
+}
+
+/** Multi-octave fractal noise */
+function fbm(x: number, y: number, octaves = 4) {
+  let val = 0, amp = 0.5, freq = 1
+  for (let i = 0; i < octaves; i++) {
+    val += amp * valueNoise(x * freq, y * freq)
+    amp *= 0.5; freq *= 2
+  }
+  return val
+}
+
+/** Create a stone/brick DataTexture for the winery building */
+function createStoneTexture(w = 256, h = 256): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      // Stone block pattern
+      const bx = Math.floor(x / 32), by = Math.floor(y / 24)
+      const offsetRow = (by % 2 === 0) ? 0 : 16
+      const localX = (x + offsetRow) % 32, localY = y % 24
+      const isMortar = localX < 1 || localY < 1
+      // Noise for stone variation
+      const n = fbm(x * 0.05, y * 0.05, 3)
+      const blockNoise = hash(bx + offsetRow, by)
+      if (isMortar) {
+        data[i] = 100; data[i + 1] = 90; data[i + 2] = 78; data[i + 3] = 255
+      } else {
+        const base = 120 + blockNoise * 50 + n * 30
+        data[i] = Math.min(255, base * 0.85)       // R
+        data[i + 1] = Math.min(255, base * 0.78)   // G
+        data[i + 2] = Math.min(255, base * 0.65)   // B
+        data[i + 3] = 255
+      }
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(4, 3)
+  tex.needsUpdate = true
+  return tex
+}
+
+/** Create a soil normal map for terrain */
+function createSoilNormalMap(w = 256, h = 256): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      // Height from multi-octave noise
+      const scale = 0.08
+      const hL = fbm((x - 1) * scale, y * scale, 4)
+      const hR = fbm((x + 1) * scale, y * scale, 4)
+      const hD = fbm(x * scale, (y - 1) * scale, 4)
+      const hU = fbm(x * scale, (y + 1) * scale, 4)
+      // Normal via central differences
+      const dx = (hR - hL) * 3.0
+      const dy = (hU - hD) * 3.0
+      data[i] = Math.min(255, Math.max(0, (dx * 0.5 + 0.5) * 255))
+      data[i + 1] = Math.min(255, Math.max(0, (dy * 0.5 + 0.5) * 255))
+      data[i + 2] = 200  // Z component (mostly up)
+      data[i + 3] = 255
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(10, 10)
+  tex.needsUpdate = true
+  return tex
+}
+
+/** Create a leaf texture with alpha channel for transparency */
+function createLeafTexture(w = 64, h = 64): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  const cx = w / 2, cy = h / 2
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      // Leaf shape: elongated ellipse with pointed tip
+      const nx = (x - cx) / cx, ny = (y - cy) / cy
+      // Heart-ish leaf shape
+      const dist = Math.sqrt(nx * nx * 0.8 + ny * ny * 1.3)
+      // Serrated edge via sin modulation
+      const angle = Math.atan2(ny, nx)
+      const serration = 1 + Math.sin(angle * 7) * 0.08 + Math.sin(angle * 13) * 0.04
+      const leafMask = dist < 0.75 * serration ? 1 : 0
+      // Vein structure
+      const mainVein = Math.abs(nx) < 0.03 ? 0.7 : 1
+      const sideVein = Math.abs(Math.sin(ny * 8 + nx * 3)) < 0.08 ? 0.85 : 1
+      const veinFactor = mainVein * sideVein
+      // Green color with noise variation
+      const n = fbm(x * 0.15, y * 0.15, 2)
+      const green = (0.55 + n * 0.15) * veinFactor
+      data[i] = Math.min(255, green * 120)           // R
+      data[i + 1] = Math.min(255, green * 220)       // G
+      data[i + 2] = Math.min(255, green * 70)        // B
+      data[i + 3] = leafMask * 255                    // Alpha
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.needsUpdate = true
+  return tex
+}
+
+/* ═══════════════════════════════════════════════════════
+   TERRAIN — displaced with procedural soil normal map
    ═══════════════════════════════════════════════════════ */
 function Terrain() {
   const ref = useRef<THREE.Mesh>(null)
+  const normalMap = useMemo(() => createSoilNormalMap(), [])
 
   useEffect(() => {
     if (!ref.current) return
@@ -39,10 +163,13 @@ function Terrain() {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)
       const y = pos.getY(i)
+      // Multi-octave displacement
       const h =
         Math.sin(x * 0.08) * Math.cos(y * 0.06) * 0.8 +
         Math.sin(x * 0.25 + 1.7) * Math.cos(y * 0.22 + 0.9) * 0.3 +
-        Math.sin(x * 0.6 + 3.1) * Math.cos(y * 0.55 + 2.4) * 0.1
+        Math.sin(x * 0.6 + 3.1) * Math.cos(y * 0.55 + 2.4) * 0.1 +
+        // Additional fine noise for soil clumps
+        fbm(x * 0.3, y * 0.3, 3) * 0.15
       pos.setZ(i, h)
     }
     pos.needsUpdate = true
@@ -52,7 +179,13 @@ function Terrain() {
   return (
     <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
       <planeGeometry args={[100, 100, 160, 160]} />
-      <meshStandardMaterial color="#4A3728" roughness={0.95} metalness={0} />
+      <meshStandardMaterial
+        color="#4A3728"
+        roughness={0.95}
+        metalness={0}
+        normalMap={normalMap}
+        normalScale={new THREE.Vector2(0.8, 0.8)}
+      />
     </mesh>
   )
 }
@@ -123,19 +256,24 @@ function VineTrunks() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   LEAF CANOPY — 3000 instanced leaves with NDVI color
+   LEAF CANOPY — 3000 instanced leaves w/ alpha texture
    ═══════════════════════════════════════════════════════ */
 function LeafCanopy({ ndviValues, humidityValues }: VineRowsProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null!)
   const dummy = useMemo(() => new THREE.Object3D(), [])
   const leafGeo = useMemo(() => createLeafGeometry(), [])
+  const leafTex = useMemo(() => createLeafTexture(), [])
 
   const material = useMemo(() => {
     const mat = new THREE.MeshStandardMaterial({
-      roughness: 0.6,
-      metalness: 0.05,
+      roughness: 0.55,
+      metalness: 0.03,
       side: THREE.DoubleSide,
       envMapIntensity: 0.8,
+      map: leafTex,
+      alphaMap: leafTex,
+      alphaTest: 0.4,
+      transparent: true,
     })
     mat.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -144,7 +282,7 @@ function LeafCanopy({ ndviValues, humidityValues }: VineRowsProps) {
       )
     }
     return mat
-  }, [])
+  }, [leafTex])
 
   useEffect(() => {
     const mesh = meshRef.current
@@ -183,7 +321,7 @@ function LeafCanopy({ ndviValues, humidityValues }: VineRowsProps) {
     }
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-  }, [dummy, ndviValues, leafGeo])
+  }, [dummy, ndviValues, leafGeo, leafTex])
 
   const tmpColor = useMemo(() => new THREE.Color(), [])
   const frameCount = useRef(0)
@@ -313,11 +451,31 @@ function SensorNode({
 const MemoSensorNode = memo(SensorNode)
 
 /* ═══════════════════════════════════════════════════════
-   DRONE MODEL — detailed quad-rotor with spinning props
+   DRONE MODEL — metallic carbon + rotor wash particles
    ═══════════════════════════════════════════════════════ */
+const PARTICLE_COUNT = 40
+
 function DroneModel() {
   const ref = useRef<THREE.Group>(null)
   const propRefs = useRef<THREE.Mesh[]>([])
+  const particleRef = useRef<THREE.Points>(null)
+
+  // Rotor wash particle positions
+  const particlePositions = useMemo(() => {
+    const arr = new Float32Array(PARTICLE_COUNT * 3)
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      arr[i * 3] = (Math.random() - 0.5) * 1.2
+      arr[i * 3 + 1] = -Math.random() * 1.5
+      arr[i * 3 + 2] = (Math.random() - 0.5) * 1.2
+    }
+    return arr
+  }, [])
+
+  const particleSizes = useMemo(() => {
+    const arr = new Float32Array(PARTICLE_COUNT)
+    for (let i = 0; i < PARTICLE_COUNT; i++) arr[i] = 0.02 + Math.random() * 0.04
+    return arr
+  }, [])
 
   useFrame(({ clock }) => {
     if (!ref.current) return
@@ -325,72 +483,225 @@ function DroneModel() {
     ref.current.position.set(Math.sin(t) * 14, 8 + Math.sin(t * 2) * 0.4, Math.cos(t) * 10)
     ref.current.rotation.y = t + Math.PI / 2
     propRefs.current.forEach((p) => { if (p) p.rotation.y += 0.8 })
+
+    // Animate rotor wash particles
+    if (particleRef.current) {
+      const pos = particleRef.current.geometry.attributes.position as THREE.BufferAttribute
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        let y = pos.getY(i)
+        y -= 0.06 + Math.random() * 0.03
+        if (y < -2) {
+          pos.setXYZ(i, (Math.random() - 0.5) * 1.0, -0.15, (Math.random() - 0.5) * 1.0)
+        } else {
+          pos.setY(i, y)
+          // Slight spread
+          pos.setX(i, pos.getX(i) + (Math.random() - 0.5) * 0.02)
+          pos.setZ(i, pos.getZ(i) + (Math.random() - 0.5) * 0.02)
+        }
+      }
+      pos.needsUpdate = true
+    }
   })
 
   return (
     <group ref={ref}>
+      {/* Main body — carbon fiber look */}
       <mesh castShadow>
         <boxGeometry args={[0.7, 0.1, 0.4]} />
-        <meshStandardMaterial color="#1A1A1A" metalness={0.7} roughness={0.25} />
+        <meshStandardMaterial color="#1A1A1A" metalness={0.92} roughness={0.12} envMapIntensity={1.5} />
       </mesh>
+      {/* Camera pod */}
       <mesh position={[0.15, -0.1, 0]} castShadow>
         <sphereGeometry args={[0.06, 12, 12]} />
-        <meshStandardMaterial color="#222" metalness={0.9} roughness={0.1} />
+        <meshStandardMaterial color="#111" metalness={0.95} roughness={0.08} envMapIntensity={1.5} />
       </mesh>
+      {/* Camera lens */}
+      <mesh position={[0.15, -0.12, 0.04]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.02, 0.02, 0.02, 8]} />
+        <meshStandardMaterial color="#222266" metalness={0.3} roughness={0.1} />
+      </mesh>
+      {/* Arms + motors + propellers */}
       {([[-0.4, 0, -0.3], [0.4, 0, -0.3], [-0.4, 0, 0.3], [0.4, 0, 0.3]] as [number, number, number][]).map((p, i) => (
         <group key={i} position={p}>
-          <mesh><cylinderGeometry args={[0.015, 0.015, 0.08, 5]} /><meshStandardMaterial color="#333" metalness={0.6} /></mesh>
-          <mesh position={[0, 0.05, 0]}><cylinderGeometry args={[0.04, 0.04, 0.04, 8]} /><meshStandardMaterial color="#444" metalness={0.8} roughness={0.2} /></mesh>
+          {/* Arm */}
+          <mesh>
+            <cylinderGeometry args={[0.018, 0.018, 0.08, 6]} />
+            <meshStandardMaterial color="#222" metalness={0.9} roughness={0.15} />
+          </mesh>
+          {/* Motor housing */}
+          <mesh position={[0, 0.05, 0]}>
+            <cylinderGeometry args={[0.04, 0.04, 0.05, 10]} />
+            <meshStandardMaterial color="#333" metalness={0.92} roughness={0.1} />
+          </mesh>
+          {/* Propeller disc */}
           <mesh ref={(el) => { if (el) propRefs.current[i] = el }} position={[0, 0.08, 0]}>
-            <cylinderGeometry args={[0.2, 0.2, 0.006, 3]} /><meshStandardMaterial color="#555" transparent opacity={0.15} />
+            <cylinderGeometry args={[0.2, 0.2, 0.006, 3]} />
+            <meshStandardMaterial color="#555" metalness={0.5} transparent opacity={0.12} />
           </mesh>
         </group>
       ))}
+      {/* Landing gear legs */}
+      {[-0.2, 0.2].map((z, i) => (
+        <mesh key={`leg-${i}`} position={[0, -0.12, z]}>
+          <boxGeometry args={[0.5, 0.015, 0.015]} />
+          <meshStandardMaterial color="#222" metalness={0.85} roughness={0.2} />
+        </mesh>
+      ))}
+      {/* Nav lights */}
       <pointLight position={[0, -0.15, 0]} intensity={0.5} color="#4ADE80" distance={5} />
-      <mesh position={[-0.35, 0.02, 0]}><sphereGeometry args={[0.02, 6, 6]} /><meshStandardMaterial color="#EF4444" emissive="#EF4444" emissiveIntensity={2} toneMapped={false} /></mesh>
+      <mesh position={[-0.35, 0.02, 0]}>
+        <sphereGeometry args={[0.02, 6, 6]} />
+        <meshStandardMaterial color="#EF4444" emissive="#EF4444" emissiveIntensity={2} toneMapped={false} />
+      </mesh>
+      <mesh position={[0.35, 0.02, 0]}>
+        <sphereGeometry args={[0.02, 6, 6]} />
+        <meshStandardMaterial color="#22C55E" emissive="#22C55E" emissiveIntensity={2} toneMapped={false} />
+      </mesh>
+
+      {/* Rotor wash particle system */}
+      <points ref={particleRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[particlePositions, 3]}
+          />
+          <bufferAttribute
+            attach="attributes-size"
+            args={[particleSizes, 1]}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          size={0.04}
+          color="#998877"
+          transparent
+          opacity={0.25}
+          sizeAttenuation
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
     </group>
   )
 }
 
 /* ═══════════════════════════════════════════════════════
-   WINERY BUILDING — stone + timber industrial
+   WINERY BUILDING — stone texture + real tile roof
    ═══════════════════════════════════════════════════════ */
 function WineryBuilding() {
+  const stoneTex = useMemo(() => createStoneTexture(), [])
+
   return (
     <group position={[0, 0, -22]}>
+      {/* Main building body — stone textured */}
       <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[16, 5.5, 9]} />
-        <meshStandardMaterial color="#5C4D3C" roughness={0.9} metalness={0.03} />
+        <meshStandardMaterial map={stoneTex} roughness={0.88} metalness={0.03} />
       </mesh>
-      <mesh position={[0, 5.8, 0]} castShadow>
-        <boxGeometry args={[17, 0.3, 10]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.92} />
+
+      {/* Roof ridge beam */}
+      <mesh position={[0, 6.2, 0]} castShadow>
+        <boxGeometry args={[17, 0.15, 0.15]} />
+        <meshStandardMaterial color="#5C4033" roughness={0.9} metalness={0.05} />
       </mesh>
-      <mesh position={[0, 6.5, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-        <coneGeometry args={[12, 2, 4]} />
-        <meshStandardMaterial color="#6D4C2B" roughness={0.95} />
-      </mesh>
+
+      {/* Tile roof — front slope */}
+      <group position={[0, 5.7, 2.5]} rotation={[0.35, 0, 0]}>
+        {/* Base roof plane */}
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[17.5, 0.12, 5.5]} />
+          <meshStandardMaterial color="#8B4513" roughness={0.92} metalness={0.02} />
+        </mesh>
+        {/* Tile rows — overlapping ridges */}
+        {Array.from({ length: 10 }, (_, i) => (
+          <mesh key={`tile-f-${i}`} position={[0, 0.09, -2.5 + i * 0.55]} castShadow>
+            <boxGeometry args={[17.5, 0.06, 0.3]} />
+            <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Tile roof — back slope */}
+      <group position={[0, 5.7, -2.5]} rotation={[-0.35, 0, 0]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[17.5, 0.12, 5.5]} />
+          <meshStandardMaterial color="#8B4513" roughness={0.92} metalness={0.02} />
+        </mesh>
+        {Array.from({ length: 10 }, (_, i) => (
+          <mesh key={`tile-b-${i}`} position={[0, 0.09, -2.5 + i * 0.55]} castShadow>
+            <boxGeometry args={[17.5, 0.06, 0.3]} />
+            <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Entrance archway */}
       <mesh position={[0, 1.8, 4.51]}>
         <planeGeometry args={[3, 3.6]} />
         <meshStandardMaterial color="#2A1F15" roughness={0.85} />
       </mesh>
       <mesh position={[0, 3.6, 4.52]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.5, 0.15, 8, 16, Math.PI]} />
+        <torusGeometry args={[1.5, 0.18, 8, 16, Math.PI]} />
         <meshStandardMaterial color="#7A6A55" roughness={0.85} metalness={0.1} />
       </mesh>
+      {/* Keystone */}
+      <mesh position={[0, 5.1, 4.53]} castShadow>
+        <boxGeometry args={[0.4, 0.5, 0.2]} />
+        <meshStandardMaterial color="#9A8A7A" roughness={0.85} />
+      </mesh>
+
+      {/* Windows with warm glow + stone frames */}
       {([-5, -2.5, 2.5, 5] as number[]).map((x) => (
         <group key={x}>
-          <mesh position={[x, 3.5, 4.51]}><planeGeometry args={[1, 1.4]} /><meshStandardMaterial color="#1A1A1A" emissive="#FF9944" emissiveIntensity={0.4} /></mesh>
-          <mesh position={[x, 3.5, 4.52]}><planeGeometry args={[1.1, 1.5]} /><meshStandardMaterial color="#5C4033" roughness={0.9} /></mesh>
+          <mesh position={[x, 3.5, 4.51]}>
+            <planeGeometry args={[1, 1.4]} />
+            <meshStandardMaterial color="#1A1A1A" emissive="#FF9944" emissiveIntensity={0.4} />
+          </mesh>
+          {/* Stone window frame */}
+          <mesh position={[x, 3.5, 4.52]}>
+            <planeGeometry args={[1.2, 1.6]} />
+            <meshStandardMaterial color="#6A5A4A" roughness={0.9} />
+          </mesh>
+          {/* Window sill */}
+          <mesh position={[x, 2.75, 4.6]} castShadow>
+            <boxGeometry args={[1.3, 0.08, 0.2]} />
+            <meshStandardMaterial color="#7A6A55" roughness={0.88} />
+          </mesh>
         </group>
       ))}
+
+      {/* Side extension — also stone textured */}
       <mesh position={[-10, 1.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[5, 3.5, 7]} />
-        <meshStandardMaterial color="#4A3F35" roughness={0.92} metalness={0.02} />
+        <meshStandardMaterial map={stoneTex} roughness={0.9} metalness={0.02} />
       </mesh>
+      {/* Extension roof */}
+      <group position={[-10, 3.5, 0]} rotation={[0.2, 0, 0]}>
+        <mesh castShadow>
+          <boxGeometry args={[5.8, 0.1, 4.2]} />
+          <meshStandardMaterial color="#8B4513" roughness={0.92} />
+        </mesh>
+        {Array.from({ length: 6 }, (_, i) => (
+          <mesh key={`ext-tile-${i}`} position={[0, 0.08, -1.8 + i * 0.65]} castShadow>
+            <boxGeometry args={[5.8, 0.05, 0.35]} />
+            <meshStandardMaterial color={i % 2 === 0 ? '#A0522D' : '#8B4513'} roughness={0.9} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Loading dock */}
       <mesh position={[8.5, 0.4, 2]} castShadow>
         <boxGeometry args={[2, 0.8, 3]} />
         <meshStandardMaterial color="#555" metalness={0.6} roughness={0.4} />
+      </mesh>
+
+      {/* Chimney */}
+      <mesh position={[3, 7.5, -1]} castShadow>
+        <boxGeometry args={[0.6, 2.5, 0.6]} />
+        <meshStandardMaterial color="#6A5545" roughness={0.92} />
+      </mesh>
+      <mesh position={[3, 8.8, -1]} castShadow>
+        <boxGeometry args={[0.8, 0.15, 0.8]} />
+        <meshStandardMaterial color="#7A6555" roughness={0.9} />
       </mesh>
     </group>
   )
@@ -460,6 +771,7 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
       <DroneModel />
       <WineryBuilding />
 
+      {/* Corner vineyard posts */}
       {([[-24, 0.15, -12], [24, 0.15, -12], [-24, 0.15, 12], [24, 0.15, 12]] as [number, number, number][]).map((p, i) => (
         <mesh key={i} position={p} castShadow>
           <cylinderGeometry args={[0.06, 0.08, 0.3, 6]} />

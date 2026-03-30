@@ -108,12 +108,13 @@ export default function WineryScene({
 
       <ContactShadows
         position={[0, -0.01, 0]}
-        opacity={0.4}
-        scale={60}
-        blur={2}
-        far={20}
+        opacity={0.5}
+        scale={80}
+        blur={2.5}
+        far={25}
         frames={1}
-        color="#000000"
+        resolution={512}
+        color="#1A0F05"
       />
 
       <PostProcessing />
