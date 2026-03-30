@@ -90,7 +90,7 @@ function useVineInstancing(
   }, [meshRef, dummy])
 
   const tmpColor = useMemo(() => new THREE.Color(), [])
-  useFrame(({ clock }) => {
+  useFrame(({ clock, invalidate }) => {
     const mesh = meshRef.current
     if (!mesh) return
     const t = clock.elapsedTime
@@ -111,6 +111,7 @@ function useVineInstancing(
       }
     }
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    invalidate()
   })
 }
 
@@ -238,7 +239,7 @@ function SensorNode({
   const ringRef = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, invalidate }) => {
     const t = clock.elapsedTime
     if (ref.current) ref.current.position.y = position[1] + Math.sin(t * 2) * 0.05
     if (ringRef.current) {
@@ -246,6 +247,7 @@ function SensorNode({
       const mat = ringRef.current.material as THREE.MeshBasicMaterial
       mat.opacity = 0.15 + Math.sin(t * 1.5) * 0.1
     }
+    invalidate()
   })
 
   return (
@@ -292,11 +294,12 @@ function SensorNode({
 function DroneModel() {
   const ref = useRef<THREE.Group>(null)
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, invalidate }) => {
     if (!ref.current) return
     const t = clock.elapsedTime * 0.3
     ref.current.position.set(Math.sin(t) * 10, 7 + Math.sin(t * 2) * 0.3, Math.cos(t) * 8)
     ref.current.rotation.y = t + Math.PI / 2
+    invalidate()
   })
 
   return (

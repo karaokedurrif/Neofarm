@@ -69,6 +69,7 @@ export default function WineryScene({
   return (
     <Canvas
       shadows
+      frameloop="demand"
       dpr={[1, 1.5]}
       gl={{
         antialias: true,

@@ -1,11 +1,9 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-ui', weight: ['400', '500', '600', '700', '800'] })
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', weight: ['500', '700'] })
 
 export const metadata: Metadata = {
   title: 'BodegaData Hub',
@@ -19,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="dark">
-      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans bg-[var(--bg)] text-[var(--text)] antialiased`}>
+        <body className={`${GeistSans.variable} ${GeistMono.variable} font-sans bg-[var(--bg)] text-[var(--text)] antialiased`}>
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
           <div className="flex-1 flex flex-col overflow-hidden">
