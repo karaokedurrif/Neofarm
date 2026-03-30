@@ -658,36 +658,40 @@ function DroneModel() {
 /* ═══════════════════════════════════════════════════════
    WINERY BUILDING — stone texture + real tile roof
    ═══════════════════════════════════════════════════════ */
+
+/** Generate a normal map from the stone brick pattern using gradient computation */
+function createStoneNormalMap(w = 256, h = 256): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      const bx = Math.floor(x / 32), by = Math.floor(y / 24)
+      const offsetRow = (by % 2 === 0) ? 0 : 16
+      const lx = (x + offsetRow) % 32, ly = y % 24
+      const isMortar = lx < 1 || ly < 1
+      // Height at current, right, and up neighbors
+      const hC = isMortar ? 0 : 0.5 + hash(bx + offsetRow, by) * 0.3 + fbm(x * 0.08, y * 0.08, 3) * 0.2
+      const hR = ((x + 1 + offsetRow) % 32 < 1) ? 0 : 0.5 + hash(Math.floor((x + 1) / 32) + offsetRow, by) * 0.3 + fbm((x + 1) * 0.08, y * 0.08, 3) * 0.2
+      const hU = ((y + 1) % 24 < 1) ? 0 : 0.5 + hash(bx + offsetRow, Math.floor((y + 1) / 24)) * 0.3 + fbm(x * 0.08, (y + 1) * 0.08, 3) * 0.2
+      // Gradient → normal
+      const dx = (hR - hC) * 4.0, dy = (hU - hC) * 4.0
+      data[i] = Math.min(255, Math.max(0, (dx * 0.5 + 0.5) * 255))
+      data[i + 1] = Math.min(255, Math.max(0, (dy * 0.5 + 0.5) * 255))
+      data[i + 2] = 200 // Z component — mostly pointing up
+      data[i + 3] = 255
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(4, 3)
+  tex.needsUpdate = true
+  return tex
+}
+
 function WineryBuilding() {
   const stoneTex = useMemo(() => createStoneTexture(), [])
   const stoneDispMap = useMemo(() => createStoneDisplacementMap(), [])
-  const stoneNormalMap = useMemo(() => {
-    // Derive normal from displacement for bump relief on facade
-    const w = 256, h = 256
-    const data = new Uint8Array(w * h * 4)
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = (y * w + x) * 4
-        const bx = Math.floor(x / 32), by = Math.floor(y / 24)
-        const offsetRow = (by % 2 === 0) ? 0 : 16
-        const lx = (x + offsetRow) % 32, ly = y % 24
-        const isMortar = lx < 1 || ly < 1
-        const hC = isMortar ? 0 : 0.5 + hash(bx + offsetRow, by) * 0.3
-        const hR = ((x + 1 + offsetRow) % 32 < 1) ? 0 : 0.5 + hash(Math.floor((x + 1) / 32) + offsetRow, by) * 0.3
-        const hU = ((y + 1) % 24 < 1) ? 0 : 0.5 + hash(bx + offsetRow, Math.floor((y + 1) / 24)) * 0.3
-        const dx = (hR - hC) * 4.0, dy = (hU - hC) * 4.0
-        data[i] = Math.min(255, Math.max(0, (dx * 0.5 + 0.5) * 255))
-        data[i + 1] = Math.min(255, Math.max(0, (dy * 0.5 + 0.5) * 255))
-        data[i + 2] = 200
-        data[i + 3] = 255
-      }
-    }
-    const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-    tex.repeat.set(4, 3)
-    tex.needsUpdate = true
-    return tex
-  }, [])
+  const stoneNormalMap = useMemo(() => createStoneNormalMap(), [])
 
   return (
     <group position={[0, 0, -22]}>
@@ -696,10 +700,10 @@ function WineryBuilding() {
         <meshStandardMaterial
           map={stoneTex}
           normalMap={stoneNormalMap}
-          normalScale={new THREE.Vector2(1.5, 1.5)}
+          normalScale={new THREE.Vector2(2.5, 2.5)}
           displacementMap={stoneDispMap}
           displacementScale={0.1}
-          roughness={0.85}
+          roughness={0.9}
           metalness={0.02}
           envMapIntensity={0.7}
         />
@@ -797,10 +801,10 @@ function WineryBuilding() {
         <meshStandardMaterial
           map={stoneTex}
           normalMap={stoneNormalMap}
-          normalScale={new THREE.Vector2(1.2, 1.2)}
+          normalScale={new THREE.Vector2(2.5, 2.5)}
           displacementMap={stoneDispMap}
           displacementScale={0.06}
-          roughness={0.85}
+          roughness={0.9}
           metalness={0.02}
           envMapIntensity={0.7}
         />
