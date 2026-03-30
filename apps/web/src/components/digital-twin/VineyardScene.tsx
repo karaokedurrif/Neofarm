@@ -690,7 +690,7 @@ function WineryBuilding() {
           normalScale={new THREE.Vector2(1.2, 1.2)}
           displacementMap={stoneDispMap}
           displacementScale={0.08}
-          roughness={0.92}
+          roughness={0.8}
           metalness={0.02}
         />
       </mesh>
@@ -792,7 +792,7 @@ function WineryBuilding() {
           normalScale={new THREE.Vector2(1.0, 1.0)}
           displacementMap={stoneDispMap}
           displacementScale={0.05}
-          roughness={0.92}
+          roughness={0.8}
           metalness={0.02}
         />
       </mesh>
@@ -854,7 +854,7 @@ function AccessPath() {
 }
 
 function GoldenHourSky() {
-  return <Sky distance={450000} sunPosition={[150, 8, -80]} turbidity={10} rayleigh={2} mieCoefficient={0.005} mieDirectionalG={0.85} />
+  return <Sky distance={450000} sunPosition={[100, 10, 100]} turbidity={10} rayleigh={2} mieCoefficient={0.005} mieDirectionalG={0.85} />
 }
 
 function SceneAnimationDriver() {

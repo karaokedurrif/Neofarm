@@ -1,10 +1,14 @@
 'use client'
-import { useState, useCallback, Suspense, memo, useMemo } from 'react'
+import { useState, useCallback, Suspense, memo, useMemo, type ComponentType } from 'react'
 import dynamic from 'next/dynamic'
 import { Leaf, Warehouse, Package, Maximize2, Minimize2, RotateCcw } from 'lucide-react'
 
 // Dynamic imports for 3D components (SSR disabled)
-const WineryScene = dynamic(() => import('./WineryScene'), { ssr: false })
+const WineryScene = dynamic<{
+  children: React.ReactNode
+  cameraPosition?: [number, number, number]
+  cameraTarget?: [number, number, number]
+}>(() => import('./WineryScene'), { ssr: false })
 const VineyardScene = dynamic(() => import('./VineyardScene'), { ssr: false })
 const CellarScene = dynamic(() => import('./CellarScene'), { ssr: false })
 const BarrelRoomScene = dynamic(() => import('./BarrelRoomScene'), { ssr: false })

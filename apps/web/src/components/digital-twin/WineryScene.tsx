@@ -1,7 +1,7 @@
 'use client'
 import { Canvas } from '@react-three/fiber'
 import { Environment, ContactShadows, OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing'
 import { Suspense } from 'react'
 import * as THREE from 'three'
 
@@ -17,7 +17,7 @@ function SceneLighting() {
       {/* Primary sun — warm golden-hour directional */}
       <directionalLight
         position={[-20, 15, -10]}
-        intensity={2}
+        intensity={2.2}
         color="#FF9944"
         castShadow
         shadow-mapSize-width={1024}
@@ -29,23 +29,22 @@ function SceneLighting() {
         shadow-camera-bottom={-30}
         shadow-bias={-0.0005}
       />
-      {/* Fill light — low-intensity warm from opposite side */}
-      <directionalLight position={[10, 8, 15]} intensity={0.6} color="#B08050" />
-      {/* Rim light for depth separation */}
-      <pointLight position={[0, 12, -20]} intensity={0.5} color="#FF6633" />
-      {/* Very subtle hemisphere — avoid flattening scene */}
-      <hemisphereLight args={['#FFD4A0', '#3D2B1F', 0.08]} />
+      {/* Very subtle hemisphere — Sky + Environment handle the rest */}
+      <hemisphereLight args={['#FFD4A0', '#3D2B1F', 0.06]} />
     </>
   )
 }
 
 function PostProcessing() {
   return (
-    <EffectComposer>
+    <EffectComposer multisampling={0}>
+      {/* SSAO — ambient occlusion in cracks, under vines, building recesses */}
+      <N8AO aoRadius={2} intensity={1.5} distanceFalloff={0.5} />
+      {/* Soft bloom — sensors glow, window emission */}
       <Bloom
-        luminanceThreshold={1}
+        luminanceThreshold={1.2}
         luminanceSmoothing={0.9}
-        intensity={0.6}
+        intensity={0.3}
       />
       <Vignette eskil={false} offset={0.3} darkness={0.55} />
     </EffectComposer>
@@ -80,8 +79,8 @@ export default function WineryScene({
       }}
       style={{ background: '#0F0F0F' }}
     >
-      <fog attach="fog" args={['#2A1A0A', 35, 90]} />
-      <color attach="background" args={['#0F0F0F']} />
+      <fog attach="fog" args={['#17171b', 30, 90]} />
+      <color attach="background" args={['#17171b']} />
 
       <PerspectiveCamera makeDefault position={cameraPosition} fov={45} near={0.1} far={200} />
       <OrbitControls
@@ -107,11 +106,11 @@ export default function WineryScene({
       </Suspense>
 
       <ContactShadows
-        position={[0, -0.01, 0]}
-        opacity={0.5}
-        scale={80}
-        blur={2.5}
-        far={25}
+        position={[0, 0, 0]}
+        opacity={0.4}
+        scale={50}
+        blur={2}
+        far={4.5}
         frames={1}
         resolution={512}
         color="#1A0F05"
