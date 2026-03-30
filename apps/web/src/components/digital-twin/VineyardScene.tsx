@@ -1,20 +1,21 @@
 'use client'
 import React, { useRef, useState, useMemo, useEffect, memo, useCallback } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { Html, Sky, Line } from '@react-three/drei'
 import * as THREE from 'three'
 
 /* ═══════════════════════════════════════════════════════
-   CONFIG
+   CONFIG — 1000 vine plants across 25 rows × 40 vines
    ═══════════════════════════════════════════════════════ */
-const ROWS = 20
-const VINES_PER_ROW = 25
-const ROW_SPACING = 1.6
-const VINE_SPACING = 0.48
-const TOTAL_VINES = ROWS * VINES_PER_ROW
-const POSTS_PER_ROW = 7
+const ROWS = 25
+const VINES_PER_ROW = 40
+const ROW_SPACING = 2.0
+const VINE_SPACING = 0.55
+const TOTAL_VINES = ROWS * VINES_PER_ROW   // 1000
+const POSTS_PER_ROW = 9
 const ROW_LENGTH = VINES_PER_ROW * VINE_SPACING
 const TOTAL_POSTS = ROWS * POSTS_PER_ROW
+const LEAF_INSTANCES = TOTAL_VINES * 3      // 3 leaves per vine = 3000
 
 function sr(seed: number) {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
@@ -27,7 +28,7 @@ interface VineRowsProps {
 }
 
 /* ═══════════════════════════════════════════════════════
-   TERRAIN — 128×128 with multi-octave displacement
+   TERRAIN — 160×160 displaced multi-octave
    ═══════════════════════════════════════════════════════ */
 function Terrain() {
   const ref = useRef<THREE.Mesh>(null)
@@ -39,9 +40,9 @@ function Terrain() {
       const x = pos.getX(i)
       const y = pos.getY(i)
       const h =
-        Math.sin(x * 0.15) * Math.cos(y * 0.12) * 0.5 +
-        Math.sin(x * 0.4 + 1.7) * Math.cos(y * 0.35 + 0.9) * 0.2 +
-        Math.sin(x * 0.85 + 3.1) * Math.cos(y * 0.9 + 2.4) * 0.08
+        Math.sin(x * 0.08) * Math.cos(y * 0.06) * 0.8 +
+        Math.sin(x * 0.25 + 1.7) * Math.cos(y * 0.22 + 0.9) * 0.3 +
+        Math.sin(x * 0.6 + 3.1) * Math.cos(y * 0.55 + 2.4) * 0.1
       pos.setZ(i, h)
     }
     pos.needsUpdate = true
@@ -50,20 +51,40 @@ function Terrain() {
 
   return (
     <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
-      <planeGeometry args={[70, 70, 128, 128]} />
+      <planeGeometry args={[100, 100, 160, 160]} />
       <meshStandardMaterial color="#4A3728" roughness={0.95} metalness={0} />
     </mesh>
   )
 }
 
 /* ═══════════════════════════════════════════════════════
-   VINE INSTANCING — animated emissive color pulse per-row
+   LEAF GEOMETRY — vine leaf silhouette (ShapeGeometry)
    ═══════════════════════════════════════════════════════ */
-function useVineInstancing(
-  meshRef: React.RefObject<THREE.InstancedMesh>,
-  ndviValues: number[],
-  humidityValues: number[]
-) {
+function createLeafGeometry(): THREE.BufferGeometry {
+  const shape = new THREE.Shape()
+  shape.moveTo(0, 0)
+  shape.bezierCurveTo(0.04, 0.06, 0.1, 0.1, 0.12, 0.08)
+  shape.bezierCurveTo(0.14, 0.06, 0.13, 0.12, 0.09, 0.14)
+  shape.bezierCurveTo(0.12, 0.16, 0.15, 0.13, 0.14, 0.1)
+  shape.bezierCurveTo(0.16, 0.12, 0.14, 0.18, 0.08, 0.18)
+  shape.bezierCurveTo(0.06, 0.2, 0.04, 0.18, 0.0, 0.16)
+  shape.bezierCurveTo(-0.04, 0.18, -0.06, 0.2, -0.08, 0.18)
+  shape.bezierCurveTo(-0.14, 0.18, -0.16, 0.12, -0.14, 0.1)
+  shape.bezierCurveTo(-0.15, 0.13, -0.12, 0.16, -0.09, 0.14)
+  shape.bezierCurveTo(-0.13, 0.12, -0.14, 0.06, -0.12, 0.08)
+  shape.bezierCurveTo(-0.1, 0.1, -0.04, 0.06, 0, 0)
+  const geo = new THREE.ShapeGeometry(shape, 3)
+  geo.translate(0, -0.09, 0)
+  geo.scale(1.8, 1.8, 1)
+  geo.computeVertexNormals()
+  return geo
+}
+
+/* ═══════════════════════════════════════════════════════
+   VINE TRUNKS — 1000 small instanced wood cylinders
+   ═══════════════════════════════════════════════════════ */
+function VineTrunks() {
+  const meshRef = useRef<THREE.InstancedMesh>(null!)
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
   useEffect(() => {
@@ -75,98 +96,126 @@ function useVineInstancing(
         const x = (row - ROWS / 2) * ROW_SPACING
         const z = (vine - VINES_PER_ROW / 2) * VINE_SPACING
         dummy.position.set(
-          x + (sr(row * 100 + vine) - 0.5) * 0.06,
-          0,
-          z + (sr(row * 200 + vine + 50) - 0.5) * 0.06
+          x + (sr(row * 100 + vine) - 0.5) * 0.08,
+          0.25,
+          z + (sr(row * 200 + vine + 50) - 0.5) * 0.08
         )
-        dummy.rotation.set(0, sr(row * 400 + vine) * Math.PI * 2, 0)
-        dummy.scale.setScalar(0.85 + sr(row * 300 + vine) * 0.3)
+        dummy.rotation.set(
+          (sr(row * 500 + vine) - 0.5) * 0.15,
+          sr(row * 400 + vine) * Math.PI * 2,
+          (sr(row * 600 + vine) - 0.5) * 0.1
+        )
+        dummy.scale.set(1, 0.7 + sr(row * 700 + vine) * 0.6, 1)
         dummy.updateMatrix()
         mesh.setMatrixAt(idx, dummy.matrix)
         idx++
       }
     }
     mesh.instanceMatrix.needsUpdate = true
-  }, [meshRef, dummy])
+  }, [dummy])
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, TOTAL_VINES]} castShadow>
+      <cylinderGeometry args={[0.015, 0.02, 0.55, 5]} />
+      <meshStandardMaterial color="#5C4033" roughness={0.92} metalness={0.02} />
+    </instancedMesh>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   LEAF CANOPY — 3000 instanced leaves with NDVI color
+   ═══════════════════════════════════════════════════════ */
+function LeafCanopy({ ndviValues, humidityValues }: VineRowsProps) {
+  const meshRef = useRef<THREE.InstancedMesh>(null!)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const leafGeo = useMemo(() => createLeafGeometry(), [])
+
+  const material = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      roughness: 0.6,
+      metalness: 0.05,
+      side: THREE.DoubleSide,
+      envMapIntensity: 0.8,
+    })
+    mat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <emissivemap_fragment>',
+        '#include <emissivemap_fragment>\n#ifdef USE_INSTANCING_COLOR\ntotalEmissiveRadiance += vColor * 0.15;\n#endif'
+      )
+    }
+    return mat
+  }, [])
+
+  useEffect(() => {
+    const mesh = meshRef.current
+    if (!mesh) return
+    let idx = 0
+    const tmpColor = new THREE.Color()
+    for (let row = 0; row < ROWS; row++) {
+      const ndvi = ndviValues[row]
+      tmpColor.setHex(ndvi > 0.7 ? 0x22c55e : ndvi > 0.5 ? 0xfbbf24 : 0xef4444)
+      for (let vine = 0; vine < VINES_PER_ROW; vine++) {
+        const x = (row - ROWS / 2) * ROW_SPACING
+        const z = (vine - VINES_PER_ROW / 2) * VINE_SPACING
+        const baseX = x + (sr(row * 100 + vine) - 0.5) * 0.08
+        const baseZ = z + (sr(row * 200 + vine + 50) - 0.5) * 0.08
+        for (let leaf = 0; leaf < 3; leaf++) {
+          const angle = (leaf / 3) * Math.PI * 2 + sr(idx * 37) * 1.2
+          const rad = 0.06 + sr(idx * 19) * 0.08
+          dummy.position.set(
+            baseX + Math.cos(angle) * rad,
+            0.45 + sr(idx * 23) * 0.2,
+            baseZ + Math.sin(angle) * rad
+          )
+          dummy.rotation.set(
+            -0.3 + sr(idx * 11) * 0.6,
+            sr(idx * 7) * Math.PI * 2,
+            (sr(idx * 13) - 0.5) * 0.5
+          )
+          const s = 0.7 + sr(idx * 41) * 0.6
+          dummy.scale.set(s, s, s)
+          dummy.updateMatrix()
+          mesh.setMatrixAt(idx, dummy.matrix)
+          mesh.setColorAt(idx, tmpColor)
+          idx++
+        }
+      }
+    }
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+  }, [dummy, ndviValues, leafGeo])
 
   const tmpColor = useMemo(() => new THREE.Color(), [])
   const frameCount = useRef(0)
   useFrame(({ clock, invalidate }) => {
     const mesh = meshRef.current
     if (!mesh) return
-    // Throttle color updates to every 3rd frame (~20 fps visual update)
     frameCount.current++
-    if (frameCount.current % 3 !== 0) return
+    if (frameCount.current % 4 !== 0) return
     const t = clock.elapsedTime
     let idx = 0
     for (let row = 0; row < ROWS; row++) {
       const hum = humidityValues[row]
       const ndvi = ndviValues[row]
       const pulse =
-        1 +
-        Math.sin(t * (0.3 + hum * 0.008) + row * 0.5) *
-          (0.08 + (1 - hum / 100) * 0.12)
+        1 + Math.sin(t * (0.25 + hum * 0.005) + row * 0.4) *
+        (0.06 + (1 - hum / 100) * 0.08)
       tmpColor
         .setHex(ndvi > 0.7 ? 0x22c55e : ndvi > 0.5 ? 0xfbbf24 : 0xef4444)
         .multiplyScalar(pulse)
       for (let vine = 0; vine < VINES_PER_ROW; vine++) {
-        mesh.setColorAt(idx, tmpColor)
-        idx++
+        for (let leaf = 0; leaf < 3; leaf++) {
+          mesh.setColorAt(idx, tmpColor)
+          idx++
+        }
       }
     }
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
     invalidate()
   })
-}
-
-/* ═══════════════════════════════════════════════════════
-   PROCEDURAL VINE ROWS — organic canopy shape
-   ═══════════════════════════════════════════════════════ */
-function ProceduralVineRows({ ndviValues, humidityValues }: VineRowsProps) {
-  const meshRef = useRef<THREE.InstancedMesh>(null!)
-
-  const material = useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      roughness: 0.5,
-      metalness: 0.1,
-      side: THREE.DoubleSide,
-      envMapIntensity: 1.0,
-    })
-    mat.onBeforeCompile = (shader) => {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-         #ifdef USE_INSTANCING_COLOR
-           totalEmissiveRadiance += vColor * 0.3;
-         #endif`
-      )
-    }
-    return mat
-  }, [])
-
-  const geometry = useMemo(() => {
-    const geo = new THREE.IcosahedronGeometry(0.22, 1)
-    geo.translate(0, 0.65, 0)
-    const p = geo.attributes.position as THREE.BufferAttribute
-    for (let i = 0; i < p.count; i++) {
-      p.setY(i, p.getY(i) * 0.55)
-      p.setX(i, p.getX(i) * 1.35 + (sr(i * 7) - 0.5) * 0.04)
-      p.setZ(i, p.getZ(i) * 1.35 + (sr(i * 13) - 0.5) * 0.04)
-    }
-    p.needsUpdate = true
-    geo.computeVertexNormals()
-    return geo
-  }, [])
-
-  useVineInstancing(meshRef, ndviValues, humidityValues)
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[geometry, material, TOTAL_VINES]}
-      castShadow
-      receiveShadow
-    />
+    <instancedMesh ref={meshRef} args={[leafGeo, material, LEAF_INSTANCES]} castShadow receiveShadow />
   )
 }
 
@@ -207,36 +256,23 @@ function TrellisSystem() {
   return (
     <group>
       <instancedMesh ref={postRef} args={[undefined, undefined, TOTAL_POSTS]} castShadow>
-        <cylinderGeometry args={[0.02, 0.025, 1.3, 6]} />
+        <cylinderGeometry args={[0.02, 0.025, 1.3, 5]} />
         <meshStandardMaterial color="#7A6A55" roughness={0.9} metalness={0.1} />
       </instancedMesh>
       {wireData.map((w, i) => (
-        <Line
-          key={i}
-          points={w.points as [number, number, number][]}
-          color="#888888"
-          lineWidth={0.5}
-          transparent
-          opacity={0.6}
-        />
+        <Line key={i} points={w.points as [number, number, number][]} color="#888888" lineWidth={0.5} transparent opacity={0.5} />
       ))}
     </group>
   )
 }
 
 /* ═══════════════════════════════════════════════════════
-   SENSOR NODE — high-emissive sphere caught by Bloom
+   SENSOR NODE — bloom-emissive IoT sphere
    ═══════════════════════════════════════════════════════ */
 function SensorNode({
-  position,
-  label,
-  value,
-  color = '#60A5FA',
+  position, label, value, color = '#60A5FA',
 }: {
-  position: [number, number, number]
-  label: string
-  value: string
-  color?: string
+  position: [number, number, number]; label: string; value: string; color?: string
 }) {
   const ref = useRef<THREE.Mesh>(null)
   const ringRef = useRef<THREE.Mesh>(null)
@@ -249,37 +285,19 @@ function SensorNode({
     if (ref.current) ref.current.position.y = position[1] + Math.sin(t * 2) * 0.05
     if (ringRef.current) {
       ringRef.current.scale.setScalar(1 + Math.sin(t * 1.5) * 0.15)
-      const mat = ringRef.current.material as THREE.MeshBasicMaterial
-      mat.opacity = 0.15 + Math.sin(t * 1.5) * 0.1
+      ;(ringRef.current.material as THREE.MeshBasicMaterial).opacity = 0.15 + Math.sin(t * 1.5) * 0.1
     }
-    // No invalidate() here — driven by scene-level animation loop
   })
 
   return (
     <group>
-      <mesh
-        ref={ref}
-        position={position}
-        onPointerEnter={onEnter}
-        onPointerLeave={onLeave}
-      >
+      <mesh ref={ref} position={position} onPointerEnter={onEnter} onPointerLeave={onLeave}>
         <sphereGeometry args={[0.12, 12, 12]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={hovered ? 3.0 : 1.5}
-          transparent
-          opacity={0.95}
-          toneMapped={false}
-        />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={hovered ? 3.0 : 1.5} transparent opacity={0.95} toneMapped={false} />
       </mesh>
       <mesh ref={ringRef} position={position} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.18, 0.22, 16]} />
         <meshBasicMaterial color={color} transparent opacity={0.25} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={position} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.25, 0.35, 16]} />
-        <meshBasicMaterial color={color} transparent opacity={0.08} side={THREE.DoubleSide} />
       </mesh>
       {hovered && (
         <Html position={[position[0], position[1] + 0.7, position[2]]} center>
@@ -295,133 +313,157 @@ function SensorNode({
 const MemoSensorNode = memo(SensorNode)
 
 /* ═══════════════════════════════════════════════════════
-   DRONE MODEL
+   DRONE MODEL — detailed quad-rotor with spinning props
    ═══════════════════════════════════════════════════════ */
 function DroneModel() {
   const ref = useRef<THREE.Group>(null)
+  const propRefs = useRef<THREE.Mesh[]>([])
 
   useFrame(({ clock }) => {
     if (!ref.current) return
     const t = clock.elapsedTime * 0.3
-    ref.current.position.set(Math.sin(t) * 10, 7 + Math.sin(t * 2) * 0.3, Math.cos(t) * 8)
+    ref.current.position.set(Math.sin(t) * 14, 8 + Math.sin(t * 2) * 0.4, Math.cos(t) * 10)
     ref.current.rotation.y = t + Math.PI / 2
+    propRefs.current.forEach((p) => { if (p) p.rotation.y += 0.8 })
   })
 
   return (
     <group ref={ref}>
       <mesh castShadow>
-        <boxGeometry args={[0.6, 0.12, 0.35]} />
-        <meshStandardMaterial color="#2A2A2A" metalness={0.9} roughness={0.15} />
+        <boxGeometry args={[0.7, 0.1, 0.4]} />
+        <meshStandardMaterial color="#1A1A1A" metalness={0.7} roughness={0.25} />
       </mesh>
-      {(
-        [[-0.4, 0, -0.28], [0.4, 0, -0.28], [-0.4, 0, 0.28], [0.4, 0, 0.28]] as [number, number, number][]
-      ).map((p, i) => (
+      <mesh position={[0.15, -0.1, 0]} castShadow>
+        <sphereGeometry args={[0.06, 12, 12]} />
+        <meshStandardMaterial color="#222" metalness={0.9} roughness={0.1} />
+      </mesh>
+      {([[-0.4, 0, -0.3], [0.4, 0, -0.3], [-0.4, 0, 0.3], [0.4, 0, 0.3]] as [number, number, number][]).map((p, i) => (
         <group key={i} position={p}>
-          <mesh>
-            <cylinderGeometry args={[0.015, 0.015, 0.08, 6]} />
-            <meshStandardMaterial color="#444" />
-          </mesh>
-          <mesh position={[0, 0.06, 0]}>
-            <cylinderGeometry args={[0.18, 0.18, 0.008, 3]} />
-            <meshStandardMaterial color="#555" transparent opacity={0.2} />
+          <mesh><cylinderGeometry args={[0.015, 0.015, 0.08, 5]} /><meshStandardMaterial color="#333" metalness={0.6} /></mesh>
+          <mesh position={[0, 0.05, 0]}><cylinderGeometry args={[0.04, 0.04, 0.04, 8]} /><meshStandardMaterial color="#444" metalness={0.8} roughness={0.2} /></mesh>
+          <mesh ref={(el) => { if (el) propRefs.current[i] = el }} position={[0, 0.08, 0]}>
+            <cylinderGeometry args={[0.2, 0.2, 0.006, 3]} /><meshStandardMaterial color="#555" transparent opacity={0.15} />
           </mesh>
         </group>
       ))}
-      <pointLight position={[0, -0.15, 0]} intensity={0.5} color="#4ADE80" distance={4} />
+      <pointLight position={[0, -0.15, 0]} intensity={0.5} color="#4ADE80" distance={5} />
+      <mesh position={[-0.35, 0.02, 0]}><sphereGeometry args={[0.02, 6, 6]} /><meshStandardMaterial color="#EF4444" emissive="#EF4444" emissiveIntensity={2} toneMapped={false} /></mesh>
     </group>
   )
 }
 
 /* ═══════════════════════════════════════════════════════
-   WINERY BUILDING
+   WINERY BUILDING — stone + timber industrial
    ═══════════════════════════════════════════════════════ */
 function WineryBuilding() {
   return (
-    <group position={[0, 0, -16]}>
-      <mesh position={[0, 2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[12, 4.5, 7]} />
-        <meshStandardMaterial color="#5C4D3C" roughness={0.88} metalness={0.05} />
+    <group position={[0, 0, -22]}>
+      <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+        <boxGeometry args={[16, 5.5, 9]} />
+        <meshStandardMaterial color="#5C4D3C" roughness={0.9} metalness={0.03} />
       </mesh>
-      <mesh position={[0, 4.8, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-        <coneGeometry args={[9, 2.2, 4]} />
-        <meshStandardMaterial color="#8B4513" roughness={0.92} metalness={0} />
+      <mesh position={[0, 5.8, 0]} castShadow>
+        <boxGeometry args={[17, 0.3, 10]} />
+        <meshStandardMaterial color="#8B4513" roughness={0.92} />
       </mesh>
-      <mesh position={[0, 1.3, 3.51]}>
-        <planeGeometry args={[2.2, 2.8]} />
-        <meshStandardMaterial color="#3D2B1F" roughness={0.9} />
+      <mesh position={[0, 6.5, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <coneGeometry args={[12, 2, 4]} />
+        <meshStandardMaterial color="#6D4C2B" roughness={0.95} />
       </mesh>
-      {([-3.5, 3.5] as number[]).map((x) => (
-        <mesh key={x} position={[x, 2.8, 3.51]}>
-          <planeGeometry args={[1, 1.2]} />
-          <meshStandardMaterial color="#1A1A1A" emissive="#FF9944" emissiveIntensity={0.3} />
-        </mesh>
+      <mesh position={[0, 1.8, 4.51]}>
+        <planeGeometry args={[3, 3.6]} />
+        <meshStandardMaterial color="#2A1F15" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 3.6, 4.52]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.5, 0.15, 8, 16, Math.PI]} />
+        <meshStandardMaterial color="#7A6A55" roughness={0.85} metalness={0.1} />
+      </mesh>
+      {([-5, -2.5, 2.5, 5] as number[]).map((x) => (
+        <group key={x}>
+          <mesh position={[x, 3.5, 4.51]}><planeGeometry args={[1, 1.4]} /><meshStandardMaterial color="#1A1A1A" emissive="#FF9944" emissiveIntensity={0.4} /></mesh>
+          <mesh position={[x, 3.5, 4.52]}><planeGeometry args={[1.1, 1.5]} /><meshStandardMaterial color="#5C4033" roughness={0.9} /></mesh>
+        </group>
       ))}
+      <mesh position={[-10, 1.5, 0]} castShadow receiveShadow>
+        <boxGeometry args={[5, 3.5, 7]} />
+        <meshStandardMaterial color="#4A3F35" roughness={0.92} metalness={0.02} />
+      </mesh>
+      <mesh position={[8.5, 0.4, 2]} castShadow>
+        <boxGeometry args={[2, 0.8, 3]} />
+        <meshStandardMaterial color="#555" metalness={0.6} roughness={0.4} />
+      </mesh>
     </group>
   )
 }
 
 /* ═══════════════════════════════════════════════════════
-   GOLDEN HOUR SKY
+   IRRIGATION DRIP LINES
    ═══════════════════════════════════════════════════════ */
-function GoldenHourSky() {
+function IrrigationLines() {
+  const lines = useMemo(() => {
+    const result: { points: [number, number, number][] }[] = []
+    for (let row = 0; row < ROWS; row += 2) {
+      const x = (row - ROWS / 2) * ROW_SPACING + 0.15
+      result.push({ points: [[x, 0.04, -ROW_LENGTH / 2], [x, 0.04, ROW_LENGTH / 2]] })
+    }
+    return result
+  }, [])
+  return <group>{lines.map((l, i) => <Line key={i} points={l.points} color="#1E3A5F" lineWidth={1} transparent opacity={0.4} />)}</group>
+}
+
+function AccessPath() {
   return (
-    <Sky
-      distance={450000}
-      sunPosition={[150, 8, -80]}
-      turbidity={10}
-      rayleigh={2}
-      mieCoefficient={0.005}
-      mieDirectionalG={0.85}
-    />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
+      <planeGeometry args={[2.5, ROW_LENGTH + 4]} />
+      <meshStandardMaterial color="#6B5D4F" roughness={0.98} metalness={0} />
+    </mesh>
   )
 }
 
-/* ═══════════════════════════════════════════════════════
-   ANIMATION DRIVER — single invalidate source for the scene
-   ═══════════════════════════════════════════════════════ */
+function GoldenHourSky() {
+  return <Sky distance={450000} sunPosition={[150, 8, -80]} turbidity={10} rayleigh={2} mieCoefficient={0.005} mieDirectionalG={0.85} />
+}
+
 function SceneAnimationDriver() {
   useFrame(({ invalidate }) => { invalidate() })
   return null
 }
 
 /* ═══════════════════════════════════════════════════════
-   MAIN SCENE EXPORT
+   MAIN SCENE EXPORT — 1000 vines + full detail
    ═══════════════════════════════════════════════════════ */
 interface VineyardSceneProps {
   onRowSelect?: (index: number | null) => void
 }
 
 export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
-  const ndviValues = useMemo(
-    () => Array.from({ length: ROWS }, (_, i) => 0.45 + sr(i * 17) * 0.45),
-    []
-  )
-  const humidityValues = useMemo(
-    () => Array.from({ length: ROWS }, (_, i) => 30 + sr(i * 31 + 7) * 60),
-    []
-  )
+  const ndviValues = useMemo(() => Array.from({ length: ROWS }, (_, i) => 0.45 + sr(i * 17) * 0.45), [])
+  const humidityValues = useMemo(() => Array.from({ length: ROWS }, (_, i) => 30 + sr(i * 31 + 7) * 60), [])
 
   return (
     <group>
       <SceneAnimationDriver />
       <GoldenHourSky />
       <Terrain />
+      <AccessPath />
       <TrellisSystem />
+      <VineTrunks />
+      <LeafCanopy ndviValues={ndviValues} humidityValues={humidityValues} />
+      <IrrigationLines />
 
-      <ProceduralVineRows ndviValues={ndviValues} humidityValues={humidityValues} />
-
-      <MemoSensorNode position={[-12, 1.5, -4]} label="T/HR Campo" value="19°C | 68% HR" color="#60A5FA" />
-      <MemoSensorNode position={[0, 1.2, 5]} label="Sonda Suelo 30cm" value="57% humedad | 16°C" color="#22C55E" />
-      <MemoSensorNode position={[10, 1.5, -3]} label="Sensor Hoja" value="Potencial: -0.4 MPa" color="#FBBF24" />
-      <MemoSensorNode position={[-8, 2, 8]} label="Estación Meteo" value="19°C | UV 4 | 12 km/h NW" color="#A78BFA" />
+      <MemoSensorNode position={[-16, 1.5, -6]} label="T/HR Campo" value="19°C | 68% HR" color="#60A5FA" />
+      <MemoSensorNode position={[0, 1.2, 8]} label="Sonda Suelo 30cm" value="57% humedad | 16°C" color="#22C55E" />
+      <MemoSensorNode position={[14, 1.5, -4]} label="Sensor Hoja" value="Potencial: -0.4 MPa" color="#FBBF24" />
+      <MemoSensorNode position={[-10, 2.5, 10]} label="Estación Meteo" value="19°C | UV 4 | 12 km/h NW" color="#A78BFA" />
+      <MemoSensorNode position={[10, 1.2, -10]} label="Piranómetro" value="Solar: 642 W/m²" color="#F97316" />
 
       <DroneModel />
       <WineryBuilding />
 
-      {([[-18, 0.12, -9], [18, 0.12, -9], [-18, 0.12, 9], [18, 0.12, 9]] as [number, number, number][]).map((p, i) => (
+      {([[-24, 0.15, -12], [24, 0.15, -12], [-24, 0.15, 12], [24, 0.15, 12]] as [number, number, number][]).map((p, i) => (
         <mesh key={i} position={p} castShadow>
-          <cylinderGeometry args={[0.08, 0.1, 0.25, 8]} />
-          <meshStandardMaterial color="#777" roughness={0.9} />
+          <cylinderGeometry args={[0.06, 0.08, 0.3, 6]} />
+          <meshStandardMaterial color="#888" metalness={0.5} roughness={0.6} />
         </mesh>
       ))}
     </group>
