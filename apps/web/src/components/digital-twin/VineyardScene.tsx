@@ -1,7 +1,7 @@
 'use client'
-import React, { Suspense, useRef, useState, useMemo, useEffect } from 'react'
+import React, { useRef, useState, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Html, Sky, useGLTF, Line } from '@react-three/drei'
+import { Html, Sky, Line } from '@react-three/drei'
 import * as THREE from 'three'
 
 /* ═══════════════════════════════════════════════════════
@@ -115,73 +115,9 @@ function useVineInstancing(
 }
 
 /* ═══════════════════════════════════════════════════════
-   GLB VINE ROWS — /models/vineyard.glb
-   PBR fix: override roughness/metalness, enable envMap,
-   enable shadows on all child meshes
+   PROCEDURAL VINE ROWS — organic canopy shape
    ═══════════════════════════════════════════════════════ */
-function GLBVineRows({ ndviValues, humidityValues }: VineRowsProps) {
-  const meshRef = useRef<THREE.InstancedMesh>(null!)
-  const { scene } = useGLTF('/models/vineyard.glb')
-
-  const geometry = useMemo(() => {
-    let geo: THREE.BufferGeometry | null = null
-    scene.traverse((child) => {
-      if (!(child as THREE.Mesh).isMesh) return
-      const m = child as THREE.Mesh
-      if (!geo) geo = m.geometry.clone()
-      m.castShadow = true
-      m.receiveShadow = true
-      // Fix PBR materials — avoid flat/dark GLB appearance
-      const mats = Array.isArray(m.material) ? m.material : [m.material]
-      mats.forEach((mat) => {
-        if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
-          const std = mat as THREE.MeshStandardMaterial
-          std.roughness = Math.max(std.roughness, 0.45)
-          std.metalness = Math.min(std.metalness, 0.15)
-          std.envMapIntensity = 1.0
-          std.needsUpdate = true
-        }
-      })
-    })
-    return geo!
-  }, [scene])
-
-  const material = useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      roughness: 0.5,
-      metalness: 0.1,
-      side: THREE.DoubleSide,
-      envMapIntensity: 1.0,
-    })
-    mat.onBeforeCompile = (shader) => {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-         #ifdef USE_INSTANCING_COLOR
-           totalEmissiveRadiance += vColor * 0.3;
-         #endif`
-      )
-    }
-    return mat
-  }, [])
-
-  useVineInstancing(meshRef, ndviValues, humidityValues)
-
-  return (
-    <instancedMesh
-      ref={meshRef}
-      args={[geometry, material, TOTAL_VINES]}
-      castShadow
-      receiveShadow
-      frustumCulled={false}
-    />
-  )
-}
-
-/* ═══════════════════════════════════════════════════════
-   PROCEDURAL FALLBACK — organic canopy shape
-   ═══════════════════════════════════════════════════════ */
-function FallbackVineRows({ ndviValues, humidityValues }: VineRowsProps) {
+function ProceduralVineRows({ ndviValues, humidityValues }: VineRowsProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null!)
 
   const material = useMemo(() => {
@@ -228,22 +164,6 @@ function FallbackVineRows({ ndviValues, humidityValues }: VineRowsProps) {
       frustumCulled={false}
     />
   )
-}
-
-/* ═══════════════════════════════════════════════════════
-   ERROR BOUNDARY — catches GLB 404 / parse errors
-   ═══════════════════════════════════════════════════════ */
-class VineModelBoundary extends React.Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
-  { hasError: boolean }
-> {
-  state = { hasError: false }
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-  render() {
-    return this.state.hasError ? this.props.fallback : this.props.children
-  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -465,21 +385,13 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
     []
   )
 
-  const fallbackRows = (
-    <FallbackVineRows ndviValues={ndviValues} humidityValues={humidityValues} />
-  )
-
   return (
     <group>
       <GoldenHourSky />
       <Terrain />
       <TrellisSystem />
 
-      <VineModelBoundary fallback={fallbackRows}>
-        <Suspense fallback={fallbackRows}>
-          <GLBVineRows ndviValues={ndviValues} humidityValues={humidityValues} />
-        </Suspense>
-      </VineModelBoundary>
+      <ProceduralVineRows ndviValues={ndviValues} humidityValues={humidityValues} />
 
       <SensorNode position={[-12, 1.5, -4]} label="T/HR Campo" value="19°C | 68% HR" color="#60A5FA" />
       <SensorNode position={[0, 1.2, 5]} label="Sonda Suelo 30cm" value="57% humedad | 16°C" color="#22C55E" />
