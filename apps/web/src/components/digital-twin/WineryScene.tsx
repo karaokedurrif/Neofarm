@@ -20,13 +20,14 @@ function SceneLighting() {
         intensity={4.0}
         color="#ffffff" 
         castShadow
-        shadow-mapSize={[2048, 2048]} // Sombras más nítidas, menos "pixeladas"
-        shadow-camera-far={100}
-        shadow-camera-left={-40}
-        shadow-camera-right={40}
-        shadow-camera-top={40}
-        shadow-camera-bottom={-40}
-        shadow-bias={-0.0001}
+        shadow-mapSize={[4096, 4096]}
+        shadow-camera-far={120}
+        shadow-camera-left={-50}
+        shadow-camera-right={50}
+        shadow-camera-top={50}
+        shadow-camera-bottom={-50}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.02}
       />
       {/* Luz ambiental azulada (cielo) y terrosa (suelo) */}
       <hemisphereLight args={['#87CEEB', '#443322', 1.2]} />
@@ -39,10 +40,11 @@ function PostProcessing() {
   return (
     <EffectComposer multisampling={0} enableNormalPass>
       <N8AO
-        aoRadius={0.5}
-        intensity={2.5}
-        distanceFalloff={0.8}
+        aoRadius={0.8}
+        intensity={3.0}
+        distanceFalloff={1.0}
         screenSpaceRadius
+        halfRes
       />
       <Bloom
         luminanceThreshold={1.5}
@@ -65,6 +67,7 @@ export default function WineryScene({
       gl={{
         antialias: true,
         stencil: false,
+        depth: true,
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.0,
       }}
@@ -86,7 +89,7 @@ export default function WineryScene({
       <SceneLighting />
 
       {/* Preset 'apartment' o 'park' da una luz más blanca y realista que 'sunset' */}
-      <Environment preset="apartment" environmentIntensity={0.6} />
+      <Environment preset="city" environmentIntensity={0.8} />
 
       <Suspense fallback={null}>
         {children}

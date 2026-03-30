@@ -174,13 +174,42 @@ function createLeafTexture(w = 64, h = 64): THREE.DataTexture {
 }
 
 /* ═══════════════════════════════════════════════════════
-   TERRAIN — displaced with vertex colors (earth/grass)
+   TERRAIN — displaced with vertex colors + soil texture
    ═══════════════════════════════════════════════════════ */
+
+/** Procedural soil albedo — dirt + moisture stains + gravel speckles */
+function createSoilAlbedoTexture(w = 256, h = 256): THREE.DataTexture {
+  const data = new Uint8Array(w * h * 4)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      // Large moisture patches
+      const moisture = fbm(x * 0.03 + 7.3, y * 0.03 + 4.1, 4)
+      // Fine grain noise
+      const grain = fbm(x * 0.2, y * 0.2, 3)
+      // Gravel speckles
+      const speckle = hash(x * 3, y * 3) > 0.92 ? 0.15 : 0
+      // Base earth - modulated by moisture
+      const wetFactor = moisture < 0.4 ? 1.0 - (0.4 - moisture) * 0.8 : 1.0
+      const base = (0.55 + grain * 0.2 - speckle) * wetFactor
+      data[i]     = Math.min(255, Math.max(0, base * 0.85 * 255))  // R - warm
+      data[i + 1] = Math.min(255, Math.max(0, base * 0.75 * 255))  // G
+      data[i + 2] = Math.min(255, Math.max(0, base * 0.58 * 255))  // B - earthy
+      data[i + 3] = 255
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(14, 14)
+  tex.needsUpdate = true
+  return tex
+}
+
 function Terrain() {
   const ref = useRef<THREE.Mesh>(null)
   const normalMap = useMemo(() => createSoilNormalMap(), [])
+  const soilAlbedo = useMemo(() => createSoilAlbedoTexture(), [])
   const bumpMap = useMemo(() => {
-    // Reuse noise as a bump texture for micro-relief
     const w = 256, h = 256
     const data = new Uint8Array(w * h * 4)
     for (let y = 0; y < h; y++) {
@@ -242,14 +271,81 @@ function Terrain() {
       <planeGeometry args={[100, 100, 160, 160]} />
       <meshStandardMaterial
         vertexColors
+        map={soilAlbedo}
         roughness={0.96}
         metalness={0}
         normalMap={normalMap}
-        normalScale={new THREE.Vector2(1.0, 1.0)}
+        normalScale={new THREE.Vector2(1.2, 1.2)}
         bumpMap={bumpMap}
-        bumpScale={0.15}
+        bumpScale={0.2}
       />
     </mesh>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   GROUND SCATTER — random stones + grass blades
+   ═══════════════════════════════════════════════════════ */
+const STONE_COUNT = 300
+const GRASS_COUNT = 600
+
+function GroundScatter() {
+  const stoneRef = useRef<THREE.InstancedMesh>(null!)
+  const grassRef = useRef<THREE.InstancedMesh>(null!)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+
+  useEffect(() => {
+    // Scatter small stones
+    if (stoneRef.current) {
+      const tmpColor = new THREE.Color()
+      for (let i = 0; i < STONE_COUNT; i++) {
+        const x = (sr(i * 13 + 1) - 0.5) * 90
+        const z = (sr(i * 17 + 3) - 0.5) * 90
+        dummy.position.set(x, -0.02 + sr(i * 23) * 0.03, z)
+        dummy.rotation.set(sr(i * 7) * Math.PI, sr(i * 11) * Math.PI, sr(i * 19) * Math.PI)
+        const s = 0.04 + sr(i * 29) * 0.1
+        dummy.scale.set(s, s * (0.5 + sr(i * 31) * 0.5), s)
+        dummy.updateMatrix()
+        stoneRef.current.setMatrixAt(i, dummy.matrix)
+        const grey = 0.35 + sr(i * 37) * 0.3
+        tmpColor.setRGB(grey, grey * 0.95, grey * 0.88)
+        stoneRef.current.setColorAt(i, tmpColor)
+      }
+      stoneRef.current.instanceMatrix.needsUpdate = true
+      if (stoneRef.current.instanceColor) stoneRef.current.instanceColor.needsUpdate = true
+    }
+    // Scatter grass blades
+    if (grassRef.current) {
+      const tmpColor = new THREE.Color()
+      for (let i = 0; i < GRASS_COUNT; i++) {
+        const x = (sr(i * 41 + 5) - 0.5) * 85
+        const z = (sr(i * 43 + 9) - 0.5) * 85
+        dummy.position.set(x, 0.06 + sr(i * 47) * 0.04, z)
+        dummy.rotation.set(0, sr(i * 53) * Math.PI * 2, (sr(i * 59) - 0.5) * 0.3)
+        const sy = 0.06 + sr(i * 61) * 0.1
+        dummy.scale.set(0.02, sy, 0.01)
+        dummy.updateMatrix()
+        grassRef.current.setMatrixAt(i, dummy.matrix)
+        const g = 0.25 + sr(i * 67) * 0.2
+        tmpColor.setRGB(g * 0.7, g, g * 0.3)
+        grassRef.current.setColorAt(i, tmpColor)
+      }
+      grassRef.current.instanceMatrix.needsUpdate = true
+      if (grassRef.current.instanceColor) grassRef.current.instanceColor.needsUpdate = true
+    }
+  }, [dummy])
+
+  return (
+    <group>
+      <instancedMesh ref={stoneRef} args={[undefined, undefined, STONE_COUNT]} castShadow receiveShadow>
+        <dodecahedronGeometry args={[1, 0]} />
+        <meshStandardMaterial vertexColors roughness={0.92} metalness={0.02} />
+      </instancedMesh>
+      <instancedMesh ref={grassRef} args={[undefined, undefined, GRASS_COUNT]} castShadow>
+        <planeGeometry args={[1, 1]} />
+        <meshStandardMaterial vertexColors roughness={0.8} metalness={0} side={THREE.DoubleSide} />
+      </instancedMesh>
+    </group>
   )
 }
 
@@ -298,11 +394,12 @@ function VineTrunks() {
           z + (sr(row * 200 + vine + 50) - 0.5) * 0.08
         )
         dummy.rotation.set(
-          (sr(row * 500 + vine) - 0.5) * 0.15,
+          (sr(row * 500 + vine) - 0.5) * 0.25,
           sr(row * 400 + vine) * Math.PI * 2,
-          (sr(row * 600 + vine) - 0.5) * 0.1
+          (sr(row * 600 + vine) - 0.5) * 0.2
         )
-        dummy.scale.set(1, 0.7 + sr(row * 700 + vine) * 0.6, 1)
+        const scaleJitter = 0.9 + sr(row * 800 + vine * 3) * 0.2
+        dummy.scale.set(scaleJitter, (0.7 + sr(row * 700 + vine) * 0.6) * scaleJitter, scaleJitter)
         dummy.updateMatrix()
         mesh.setMatrixAt(idx, dummy.matrix)
         // Per-instance color variation: warm-to-cool brown
@@ -787,11 +884,11 @@ function WineryBuilding() {
               <planeGeometry args={[2.6, 4.5]} />
               <meshStandardMaterial
                 color="#1A2A3A"
-                roughness={0.08}
-                metalness={0.6}
-                envMapIntensity={2.5}
+                roughness={0.05}
+                metalness={0.9}
+                envMapIntensity={3.0}
                 transparent
-                opacity={0.75}
+                opacity={0.72}
               />
             </mesh>
             {/* Steel mullion */}
@@ -993,6 +1090,7 @@ export default function VineyardScene({ onRowSelect }: VineyardSceneProps) {
     <group>
       <SceneAnimationDriver />
       <Terrain />
+      <GroundScatter />
       <AccessPath />
       <TrellisSystem />
       <VineTrunks />
