@@ -68,11 +68,12 @@ function Navbar() {
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'py-3 bg-[#070A0F]/80' : 'py-5 bg-transparent'}`}
       style={{ backdropFilter: 'blur(40px)' }}>
       <div className="section-container flex items-center justify-between">
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <span className="text-[22px] tracking-tight" style={{ fontFamily: 'var(--fb)' }}>
             <span className="font-extrabold text-white">Neo</span>
             <span className="font-light" style={{ color: 'var(--neon)' }}>Farm</span>
           </span>
+          <span className="text-[10px] font-mono tracking-widest text-[var(--t3)] hidden md:inline">IoT HUB</span>
         </div>
 
         <div className="hidden md:flex items-center gap-8">
@@ -141,17 +142,17 @@ function Hero() {
 
             {/* TEMP */}
             <div className="dn" style={{ top: '15%', left: '8%' }}>
-              <div className="dn-icon" style={{ background: 'rgba(20,184,166,.15)', color: '#14B8A6' }}>🌡</div>
+              <div className="dn-icon" style={{ background: 'rgba(20,184,166,.15)', color: '#14B8A6', fontFamily: 'var(--fm)', fontSize: '9px', fontWeight: 700 }}>T°</div>
               <div className="dn-data">
                 <div className="dn-label">TEMP</div>
                 <div className="dn-value">23.4°C</div>
               </div>
-              <div className="dn-trend up">↗ +0.8</div>
+              <div className="dn-trend up">+0.8</div>
             </div>
 
             {/* NDVI */}
             <div className="dn" style={{ top: '8%', right: '15%' }}>
-              <div className="dn-icon" style={{ background: 'rgba(22,163,74,.15)', color: '#16A34A' }}>🌿</div>
+              <div className="dn-icon" style={{ background: 'rgba(22,163,74,.15)', color: '#16A34A', fontFamily: 'var(--fm)', fontSize: '8px', fontWeight: 700 }}>SAT</div>
               <div className="dn-data">
                 <div className="dn-label">NDVI</div>
                 <div className="dn-value" style={{ color: '#14B8A6' }}>0.72</div>
@@ -160,17 +161,17 @@ function Hero() {
 
             {/* HEAD */}
             <div className="dn" style={{ bottom: '28%', left: '5%' }}>
-              <div className="dn-icon" style={{ background: 'rgba(255,184,77,.15)', color: '#FFB84D' }}>🐄</div>
+              <div className="dn-icon" style={{ background: 'rgba(255,184,77,.15)', color: '#FFB84D', fontFamily: 'var(--fm)', fontSize: '8px', fontWeight: 700 }}>GPS</div>
               <div className="dn-data">
                 <div className="dn-label">HEAD</div>
                 <div className="dn-value">847</div>
               </div>
-              <div className="dn-trend up">↗ +12</div>
+              <div className="dn-trend up">+12</div>
             </div>
 
             {/* CO₂ */}
             <div className="dn" style={{ bottom: '18%', right: '8%' }}>
-              <div className="dn-icon" style={{ background: 'rgba(139,115,85,.15)', color: '#8B7355' }}>💨</div>
+              <div className="dn-icon" style={{ background: 'rgba(139,115,85,.15)', color: '#8B7355', fontFamily: 'var(--fm)', fontSize: '8px', fontWeight: 700 }}>MRV</div>
               <div className="dn-data">
                 <div className="dn-label">CO₂</div>
                 <div className="dn-value">412<small>ppm</small></div>
@@ -179,7 +180,7 @@ function Hero() {
 
             {/* WATER */}
             <div className="dn" style={{ top: '42%', right: '3%' }}>
-              <div className="dn-icon" style={{ background: 'rgba(8,145,178,.15)', color: '#0891B2' }}>💧</div>
+              <div className="dn-icon" style={{ background: 'rgba(8,145,178,.15)', color: '#0891B2', fontFamily: 'var(--fm)', fontSize: '8px', fontWeight: 700 }}>H₂O</div>
               <div className="dn-data">
                 <div className="dn-label">WATER</div>
                 <div className="dn-value">2.4<small>m³/d</small></div>
@@ -199,9 +200,9 @@ function Hero() {
 function ProblemSection() {
   const { t } = useLang();
   const cards = [
-    { key: '1', icon: '📊' },
-    { key: '2', icon: '🔌' },
-    { key: '3', icon: '📋' },
+    { key: '1', icon: 'DB' },
+    { key: '2', icon: 'IO' },
+    { key: '3', icon: 'EU' },
   ];
   return (
     <section className="py-24 lg:py-32" style={{ background: 'var(--bg2)' }}>
@@ -214,7 +215,7 @@ function ProblemSection() {
           {cards.map((c, i) => (
             <ScrollReveal key={c.key}>
               <div className="glass-card-hover p-8 h-full" style={{ animationDelay: `${i * 0.15}s` }}>
-                <div className="text-4xl mb-5">{c.icon}</div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-mono font-bold mb-5" style={{ background: 'rgba(20,184,166,.08)', color: 'var(--neon)', border: '1px solid rgba(20,184,166,.15)' }}>{c.icon}</div>
                 <h3 className="text-xl font-semibold mb-3 font-body">{t(`problem${c.key}Title`)}</h3>
                 <p className="text-[var(--t2)] leading-relaxed">{t(`problem${c.key}Desc`)}</p>
               </div>
@@ -281,12 +282,12 @@ function PlatformSection() {
 function DigitalTwinSection() {
   const { t } = useLang();
   const items = [
-    { key: '1', icon: '🏗️', color: 'var(--neon)' },
-    { key: '2', icon: '📈', color: 'var(--cyan)' },
-    { key: '3', icon: '🌡️', color: 'var(--amber)' },
-    { key: '4', icon: '💰', color: 'var(--violet)' },
-    { key: '5', icon: '📊', color: 'var(--rose)' },
-    { key: '6', icon: '🌱', color: 'var(--neon2)' },
+    { key: '1', icon: '3D', color: 'var(--neon)' },
+    { key: '2', icon: 'FC', color: 'var(--cyan)' },
+    { key: '3', icon: 'CL', color: 'var(--amber)' },
+    { key: '4', icon: 'SIM', color: 'var(--violet)' },
+    { key: '5', icon: 'ROI', color: 'var(--rose)' },
+    { key: '6', icon: 'CO₂', color: 'var(--neon2)' },
   ];
   return (
     <section className="py-24 lg:py-32" style={{ background: 'var(--bg3)' }}>
@@ -299,7 +300,7 @@ function DigitalTwinSection() {
           {items.map((it, i) => (
             <ScrollReveal key={it.key}>
               <div className="glass-card-hover p-7 h-full group">
-                <div className="text-3xl mb-4">{it.icon}</div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xs font-mono font-bold mb-4" style={{ background: `${it.color}12`, color: it.color, border: `1px solid ${it.color}25` }}>{it.icon}</div>
                 <h3 className="text-lg font-semibold mb-2 font-body group-hover:text-[var(--neon)] transition-colors">{t(`dt${it.key}Title`)}</h3>
                 <p className="text-sm text-[var(--t2)] leading-relaxed">{t(`dt${it.key}Desc`)}</p>
               </div>
@@ -419,9 +420,9 @@ function VerticalsSection() {
 function EcosystemSection() {
   const { t } = useLang();
   const items = [
-    { key: '1', icon: '{ }', color: 'var(--neon)' },
-    { key: '2', icon: '✓', color: 'var(--cyan)' },
-    { key: '3', icon: '⚡', color: 'var(--amber)' },
+    { key: '1', icon: 'API', color: 'var(--neon)' },
+    { key: '2', icon: 'HW', color: 'var(--cyan)' },
+    { key: '3', icon: 'DEV', color: 'var(--amber)' },
   ];
   return (
     <section id="ecosystem" className="py-24 lg:py-32" style={{ background: 'linear-gradient(180deg, var(--bg4), var(--bg3))' }}>
@@ -514,8 +515,10 @@ function Footer() {
                 <span className="font-extrabold text-white">Neo</span>
                 <span className="font-light" style={{ color: 'var(--neon)' }}>Farm</span>
               </span>
+              <span className="text-[10px] font-mono tracking-widest text-[var(--t3)] ml-2">IoT HUB</span>
             </div>
-            <p className="text-xs text-[var(--t3)] leading-relaxed">{t('footerTagline')}</p>
+            <p className="text-xs text-[var(--t3)] leading-relaxed mb-3">{t('footerTagline')}</p>
+            <a href="https://geotwin.es" target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-[var(--neon)] hover:text-[var(--neon2)] transition-colors tracking-wider">GEOTWIN.ES</a>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-[var(--t1)] mb-4">{t('footerPlatform')}</h4>
@@ -543,6 +546,7 @@ function Footer() {
               <li><a href="#" className="hover:text-[var(--t2)] transition-colors">{t('footerGitHub')}</a></li>
               <li><a href="mailto:hello@neofarm.io" className="hover:text-[var(--t2)] transition-colors">{t('footerContact')}</a></li>
               <li><a href="/dafo" className="hover:text-[var(--t2)] transition-colors">{t('footerDAFO')}</a></li>
+              <li><a href="https://geotwin.es" target="_blank" rel="noopener noreferrer" className="hover:text-[var(--t2)] transition-colors">GeoTwin.es</a></li>
             </ul>
           </div>
         </div>
